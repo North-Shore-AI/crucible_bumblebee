@@ -8,6 +8,8 @@ defmodule CrucibleBumblebee.ModelLoader do
 
   def default_model_id, do: Options.default_model_id()
 
+  def infer_model_family(model_id) when is_binary(model_id), do: model_family(model_id, nil)
+
   def load!(opts \\ []) do
     case load(opts) do
       {:ok, bundle} -> bundle

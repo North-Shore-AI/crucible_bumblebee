@@ -83,7 +83,8 @@ defmodule CrucibleBumblebee.ModelSurface do
 
   def preflight(surface, model_info, opts \\ [])
 
-  def preflight(%__MODULE__{module: module}, model_info, opts) when is_atom(module) do
+  def preflight(%__MODULE__{module: module}, model_info, opts)
+      when is_atom(module) and not is_nil(module) do
     module.preflight(model_info, opts)
   end
 

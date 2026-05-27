@@ -44,20 +44,41 @@ defmodule CrucibleBumblebee.TraceWriter do
   end
 
   def signal_from_logits(logits, attrs) do
+    signal_from_tensor(
+      logits,
+      attrs
+      |> Map.put_new(:signal_type, :final_logits)
+      |> Map.put_new(:node_name, "final_logits")
+      |> Map.put_new(:capture_method, :axon_hook)
+    )
+  end
+
+  def signal_from_tensor(tensor, attrs) do
+    summary = Crucible.TensorSummary.compute(tensor, entropy: true, top_k: 10)
+
     %Crucible.SignalRecord{
       signal_id: Map.fetch!(attrs, :signal_id),
       trace_id: Map.fetch!(attrs, :trace_id),
       run_id: Map.fetch!(attrs, :run_id),
-      signal_type: :final_logits,
+      signal_type: Map.fetch!(attrs, :signal_type),
       provider_kind: :elixir_bumblebee,
       model_id: Map.fetch!(attrs, :model_id),
       model_family: Map.fetch!(attrs, :model_family),
+      model_revision: Map.get(attrs, :model_revision),
       backend: Map.fetch!(attrs, :backend),
+      dtype: summary.dtype,
+      shape: summary.shape,
+      rank: summary.rank,
+      device: Map.get(attrs, :device),
       layer_index: nil,
-      token_index: nil,
-      node_name: "final_logits",
-      capture_method: :axon_hook,
-      tensor_summary: Crucible.TensorSummary.compute(logits, entropy: true, top_k: 10),
+      token_index: Map.get(attrs, :token_index),
+      node_name: Map.fetch!(attrs, :node_name),
+      capture_method: Map.fetch!(attrs, :capture_method),
+      surface_id: Map.get(attrs, :surface_id),
+      tap_id: Map.get(attrs, :tap_id),
+      capability_status: Map.get(attrs, :capability_status, :captured),
+      capability_reason: Map.get(attrs, :capability_reason),
+      tensor_summary: summary,
       tensor_ref: nil,
       metadata: Map.get(attrs, :metadata, %{})
     }

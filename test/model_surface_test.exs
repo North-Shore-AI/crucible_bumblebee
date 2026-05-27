@@ -42,4 +42,26 @@ defmodule CrucibleBumblebee.ModelSurfaceTest do
     assert {:error, :unsupported} =
              ModelSurface.logit_lens_access(Qwen3Surface.surface(num_blocks: 1), %{}, %{})
   end
+
+  test "module-less surfaces use fallback preflight" do
+    surface =
+      ModelSurface.new!(
+        :distilbert,
+        [
+          [
+            id: "final_logits",
+            signal_type: :final_logits,
+            layer_name: "final_logits",
+            layer_index: :final,
+            operations: [:read],
+            capture_modes: [:summary]
+          ]
+        ],
+        %{surface_id: :distilbert_final_logits}
+      )
+
+    assert {:ok, preflight} = ModelSurface.preflight(surface, %{})
+    assert preflight.surface_id == :distilbert_final_logits
+    assert preflight.nodes == ["final_logits"]
+  end
 end

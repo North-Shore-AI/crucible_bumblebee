@@ -3,7 +3,7 @@ defmodule CrucibleBumblebee.Live do
   Standalone V4 native tiny GPT-2 live gates.
   """
 
-  alias CrucibleBumblebee.{ModelLoader, Preflight, TraceWriter}
+  alias CrucibleBumblebee.{ManualGeneration, ModelLoader, Preflight, TraceWriter}
   alias CrucibleBumblebee.ModelLoader.Options
   alias CrucibleTap.TapPlan
 
@@ -27,7 +27,7 @@ defmodule CrucibleBumblebee.Live do
       run_id: run_id,
       provider_kind: :elixir_bumblebee,
       model_id: options.model_id,
-      model_family: :gpt2,
+      model_family: ModelLoader.infer_model_family(options.model_id),
       backend: selected_backend
     )
 
@@ -129,6 +129,9 @@ defmodule CrucibleBumblebee.Live do
   def generation(opts \\ []) do
     name = Keyword.get(opts, :name, "model_generation_live")
     options = Options.from_env(opts)
+    prompt = Keyword.get(opts, :prompt, options.prompt || @default_prompt)
+    max_new_tokens = Keyword.get(opts, :max_new_tokens) || options.max_new_tokens || 1
+    attempt_high_level? = Keyword.get(opts, :attempt_high_level_generation?, false)
     {:ok, selected_backend} = CrucibleBumblebee.Backend.prefer(options.backend)
     trace_id = "tr_#{System.unique_integer([:positive])}"
     run_id = "run_#{System.unique_integer([:positive])}"
@@ -141,20 +144,37 @@ defmodule CrucibleBumblebee.Live do
       run_id: run_id,
       provider_kind: :elixir_bumblebee,
       model_id: options.model_id,
-      model_family: :gpt2,
+      model_family: ModelLoader.infer_model_family(options.model_id),
       backend: selected_backend
     )
 
     report =
       static_capability_report(options.model_id, selected_backend,
+        supported: [
+          :final_logits,
+          :generation_token,
+          :generation_step_logits,
+          :decode_entropy,
+          :decode_margin
+        ],
         unsupported: [
           %Crucible.UnsupportedCapability{
-            capability: :generation_step_logits,
-            reason: :generation_logits_unavailable,
+            capability: :hidden_state,
+            reason: :unsupported_by_surface,
+            required?: false
+          },
+          %Crucible.UnsupportedCapability{
+            capability: :attention_weights,
+            reason: :unsupported_by_surface,
+            required?: false
+          },
+          %Crucible.UnsupportedCapability{
+            capability: :kv_cache_metadata,
+            reason: :blocked_by_generation_pipeline,
             required?: false
           }
         ],
-        optional_dropped: [:generation_step_logits]
+        optional_dropped: [:hidden_state, :attention_weights, :kv_cache_metadata]
       )
 
     TraceWriter.write_capability_report!(report_path, report)
@@ -181,28 +201,90 @@ defmodule CrucibleBumblebee.Live do
 
     TraceWriter.write!(trace_path, :generation_start,
       trace_id: trace_id,
-      prompt_digest:
-        CrucibleSignalTrace.Digest.prefixed_text(Keyword.get(opts, :prompt, @default_prompt))
+      prompt_digest: CrucibleSignalTrace.Digest.prefixed_text(prompt),
+      max_new_tokens: max_new_tokens,
+      decode_mode: :manual_greedy
     )
 
-    _maybe_text =
-      maybe_generate_text(bundle, Keyword.get(opts, :prompt, options.prompt || @default_prompt))
+    high_level_text = if attempt_high_level?, do: maybe_generate_text(bundle, prompt)
 
-    TraceWriter.write!(trace_path, :generation_end,
-      trace_id: trace_id,
-      status: :degraded,
-      reason: :generation_logits_unavailable
-    )
+    case ManualGeneration.run(bundle, prompt, max_new_tokens: max_new_tokens) do
+      {:ok, manual} ->
+        Enum.each(manual.steps, fn step ->
+          signal =
+            TraceWriter.signal_from_tensor(step.logits, %{
+              signal_id: "sig_generation_step_logits_#{step.step_index}",
+              trace_id: trace_id,
+              run_id: run_id,
+              signal_type: :generation_step_logits,
+              model_id: bundle.model_id,
+              model_family: bundle.model_family,
+              model_revision: bundle.revision,
+              backend: bundle.backend,
+              token_index: step.step_index,
+              node_name: "generation_step_logits",
+              capture_method: :manual_autoregressive_loop,
+              capability_status: :captured
+            })
 
-    TraceWriter.write!(trace_path, :trace_end, trace_id: trace_id, status: :degraded)
+          TraceWriter.write!(trace_path, :signal_record, trace_id: trace_id, signal: signal)
 
-    %{
-      ok: true,
-      generation_supported?: false,
-      reason: :generation_logits_unavailable,
-      capability_report_path: report_path,
-      trace_path: trace_path
-    }
+          TraceWriter.write!(trace_path, :generation_step,
+            trace_id: trace_id,
+            step_index: step.step_index,
+            generated_token_id: step.token_id,
+            generated_token_text: step.token_text,
+            logits_signal_id: signal.signal_id,
+            entropy: step.entropy,
+            margin: step.margin,
+            top_k: step.top_k
+          )
+        end)
+
+        TraceWriter.write!(trace_path, :generation_end,
+          trace_id: trace_id,
+          status: :ok,
+          high_level_generation_text_available?: not is_nil(high_level_text),
+          generated_token_ids: manual.generated_token_ids,
+          generated_text: manual.decoded_text
+        )
+
+        TraceWriter.write!(trace_path, :trace_end, trace_id: trace_id, status: :ok)
+
+        %{
+          ok: true,
+          generation_supported?: true,
+          generation_success_level: :generation_step_logits,
+          generated_token_ids: manual.generated_token_ids,
+          generated_text: manual.decoded_text,
+          step_count: length(manual.steps),
+          capability_report_path: report_path,
+          trace_path: trace_path
+        }
+
+      {:error, reason} ->
+        TraceWriter.write!(trace_path, :capability_blocker,
+          trace_id: trace_id,
+          capability: :generation_step_logits,
+          reason: reason
+        )
+
+        TraceWriter.write!(trace_path, :generation_end,
+          trace_id: trace_id,
+          status: :failed,
+          reason: reason
+        )
+
+        TraceWriter.write!(trace_path, :trace_end, trace_id: trace_id, status: :failed)
+
+        %{
+          ok: false,
+          generation_supported?: false,
+          reason: reason,
+          capability_report_path: report_path,
+          trace_path: trace_path
+        }
+    end
   end
 
   def forward_tap_plan do
@@ -222,6 +304,8 @@ defmodule CrucibleBumblebee.Live do
   end
 
   def static_capability_report(model_id, backend, attrs \\ []) do
+    supported = Keyword.get(attrs, :supported, [:final_logits])
+
     unsupported =
       Keyword.get(attrs, :unsupported, [
         %Crucible.UnsupportedCapability{
@@ -242,9 +326,9 @@ defmodule CrucibleBumblebee.Live do
     %Crucible.CapabilityReport{
       provider_kind: :elixir_bumblebee,
       model_id: model_id,
-      model_family: :gpt2,
+      model_family: ModelLoader.infer_model_family(model_id),
       backend: backend,
-      supported: [:final_logits],
+      supported: supported,
       unsupported: unsupported,
       failed: [],
       degraded:
@@ -275,6 +359,22 @@ defmodule CrucibleBumblebee.Live do
     |> last_token_logits()
   end
 
+  def fetch_logits!(%{logits: logits}), do: logits
+  def fetch_logits!(%{"logits" => logits}), do: logits
+
+  def fetch_logits!(outputs),
+    do: raise("model output did not contain logits: #{inspect(Map.keys(outputs))}")
+
+  def last_token_logits(%Nx.Tensor{} = logits) do
+    case Nx.shape(logits) do
+      {_batch, sequence_length, _vocab} ->
+        Nx.slice_along_axis(logits, sequence_length - 1, 1, axis: 1)
+
+      _shape ->
+        logits
+    end
+  end
+
   defp maybe_generate_text(%{generation_config: nil}, _prompt), do: nil
 
   defp maybe_generate_text(bundle, prompt) do
@@ -291,22 +391,6 @@ defmodule CrucibleBumblebee.Live do
     Nx.Serving.run(serving, prompt)
   rescue
     _error -> nil
-  end
-
-  defp fetch_logits!(%{logits: logits}), do: logits
-  defp fetch_logits!(%{"logits" => logits}), do: logits
-
-  defp fetch_logits!(outputs),
-    do: raise("model output did not contain logits: #{inspect(Map.keys(outputs))}")
-
-  defp last_token_logits(%Nx.Tensor{} = logits) do
-    case Nx.shape(logits) do
-      {_batch, sequence_length, _vocab} ->
-        Nx.slice_along_axis(logits, sequence_length - 1, 1, axis: 1)
-
-      _shape ->
-        logits
-    end
   end
 
   defp elapsed_ms(start_ms), do: System.monotonic_time(:millisecond) - start_ms
