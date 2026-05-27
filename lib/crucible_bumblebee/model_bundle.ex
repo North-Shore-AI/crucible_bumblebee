@@ -14,6 +14,7 @@ defmodule CrucibleBumblebee.ModelBundle do
     :backend,
     :model_family,
     :revision,
-    :spec
+    :spec,
+    diagnostics: %{}
   ]
 end

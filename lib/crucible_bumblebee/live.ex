@@ -4,14 +4,16 @@ defmodule CrucibleBumblebee.Live do
   """
 
   alias CrucibleBumblebee.{ModelLoader, Preflight, TraceWriter}
+  alias CrucibleBumblebee.ModelLoader.Options
   alias CrucibleTap.TapPlan
 
   @default_prompt "Hi"
 
   def forward(opts \\ []) do
     name = Keyword.get(opts, :name, "model_forward_live")
-    prompt = Keyword.get(opts, :prompt, System.get_env("CRUCIBLE_PROMPT") || @default_prompt)
-    {:ok, selected_backend} = CrucibleBumblebee.Backend.prefer(backend_from_env())
+    options = Options.from_env(opts)
+    prompt = Keyword.get(opts, :prompt, options.prompt || @default_prompt)
+    {:ok, selected_backend} = CrucibleBumblebee.Backend.prefer(options.backend)
     trace_id = "tr_#{System.unique_integer([:positive])}"
     run_id = "run_#{System.unique_integer([:positive])}"
     trace_path = TraceWriter.output_path(name, "trace.jsonl")
@@ -24,13 +26,13 @@ defmodule CrucibleBumblebee.Live do
       trace_id: trace_id,
       run_id: run_id,
       provider_kind: :elixir_bumblebee,
-      model_id: ModelLoader.default_model_id(),
+      model_id: options.model_id,
       model_family: :gpt2,
       backend: selected_backend
     )
 
     tap_plan = forward_tap_plan()
-    static_report = static_capability_report(ModelLoader.default_model_id(), selected_backend)
+    static_report = static_capability_report(options.model_id, selected_backend)
     TraceWriter.write_capability_report!(report_path, static_report)
 
     TraceWriter.write!(trace_path, :provider_capability_report,
@@ -41,11 +43,11 @@ defmodule CrucibleBumblebee.Live do
 
     TraceWriter.write!(trace_path, :model_load_start,
       trace_id: trace_id,
-      model_id: ModelLoader.default_model_id()
+      model_id: options.model_id
     )
 
     load_started = System.monotonic_time(:millisecond)
-    bundle = ModelLoader.load!(backend: selected_backend)
+    bundle = ModelLoader.load!(%{options | backend: selected_backend})
 
     TraceWriter.write!(trace_path, :model_load_end,
       trace_id: trace_id,
@@ -126,7 +128,8 @@ defmodule CrucibleBumblebee.Live do
 
   def generation(opts \\ []) do
     name = Keyword.get(opts, :name, "model_generation_live")
-    {:ok, selected_backend} = CrucibleBumblebee.Backend.prefer(backend_from_env())
+    options = Options.from_env(opts)
+    {:ok, selected_backend} = CrucibleBumblebee.Backend.prefer(options.backend)
     trace_id = "tr_#{System.unique_integer([:positive])}"
     run_id = "run_#{System.unique_integer([:positive])}"
     trace_path = TraceWriter.output_path(name, "trace.jsonl")
@@ -137,13 +140,13 @@ defmodule CrucibleBumblebee.Live do
       trace_id: trace_id,
       run_id: run_id,
       provider_kind: :elixir_bumblebee,
-      model_id: ModelLoader.default_model_id(),
+      model_id: options.model_id,
       model_family: :gpt2,
       backend: selected_backend
     )
 
     report =
-      static_capability_report(ModelLoader.default_model_id(), selected_backend,
+      static_capability_report(options.model_id, selected_backend,
         unsupported: [
           %Crucible.UnsupportedCapability{
             capability: :generation_step_logits,
@@ -164,11 +167,11 @@ defmodule CrucibleBumblebee.Live do
 
     TraceWriter.write!(trace_path, :model_load_start,
       trace_id: trace_id,
-      model_id: ModelLoader.default_model_id()
+      model_id: options.model_id
     )
 
     load_started = System.monotonic_time(:millisecond)
-    bundle = ModelLoader.load!(backend: selected_backend)
+    bundle = ModelLoader.load!(%{options | backend: selected_backend})
 
     TraceWriter.write!(trace_path, :model_load_end,
       trace_id: trace_id,
@@ -182,7 +185,8 @@ defmodule CrucibleBumblebee.Live do
         CrucibleSignalTrace.Digest.prefixed_text(Keyword.get(opts, :prompt, @default_prompt))
     )
 
-    _maybe_text = maybe_generate_text(bundle, Keyword.get(opts, :prompt, @default_prompt))
+    _maybe_text =
+      maybe_generate_text(bundle, Keyword.get(opts, :prompt, options.prompt || @default_prompt))
 
     TraceWriter.write!(trace_path, :generation_end,
       trace_id: trace_id,
@@ -303,12 +307,6 @@ defmodule CrucibleBumblebee.Live do
       _shape ->
         logits
     end
-  end
-
-  defp backend_from_env do
-    (System.get_env("CRUCIBLE_BUMBLEBEE_BACKEND") || System.get_env("CRUCIBLE_BACKEND") ||
-       "auto")
-    |> String.to_atom()
   end
 
   defp elapsed_ms(start_ms), do: System.monotonic_time(:millisecond) - start_ms
