@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200" role="img" aria-labelledby="title desc">
+  <title id="title">crucible_bumblebee logo</title>
+  <desc id="desc">A gold and charcoal neural honeycomb inside a hexagon.</desc>
+  <defs>
+    <linearGradient id="gold" x1="28" y1="20" x2="172" y2="180" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ffdc6e"/>
+      <stop offset="0.45" stop-color="#2a261b"/>
+      <stop offset="1" stop-color="#090907"/>
+    </linearGradient>
+    <pattern id="cells" width="28" height="24" patternUnits="userSpaceOnUse">
+      <path d="M14 1 L26 7 V17 L14 23 L2 17 V7 Z" fill="none" stroke="#ffc84f" stroke-opacity="0.22" stroke-width="1.2"/>
+    </pattern>
+    <filter id="blueGlow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="2.4" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <clipPath id="clip">
+      <polygon points="100,12 176,56 176,144 100,188 24,144 24,56"/>
+    </clipPath>
+  </defs>
+  <g clip-path="url(#clip)">
+    <polygon points="100,12 176,56 176,144 100,188 24,144 24,56" fill="url(#gold)"/>
+    <rect width="200" height="200" fill="url(#cells)"/>
+    <path d="M48 126 C66 82 82 58 104 78 C124 96 135 70 154 48" fill="none" stroke="#4be9ff" stroke-width="4" stroke-linecap="round" filter="url(#blueGlow)"/>
+    <path d="M47 70 C67 100 74 140 103 124 C128 110 132 132 154 150" fill="none" stroke="#ffd35c" stroke-width="4" stroke-linecap="round"/>
+    <g fill="#10100d" stroke-width="3">
+      <circle cx="48" cy="126" r="8" stroke="#4be9ff"/>
+      <circle cx="104" cy="78" r="9" stroke="#4be9ff"/>
+      <circle cx="154" cy="48" r="8" stroke="#4be9ff"/>
+      <circle cx="47" cy="70" r="8" stroke="#ffd35c"/>
+      <circle cx="103" cy="124" r="10" stroke="#ffd35c"/>
+      <circle cx="154" cy="150" r="8" stroke="#ffd35c"/>
+    </g>
+    <path d="M75 96 H125 M100 70 V136" stroke="#fff6bf" stroke-opacity="0.45" stroke-width="2"/>
+    <path d="M84 46 L116 46 L132 74 L116 102 H84 L68 74 Z" fill="#000000" fill-opacity="0.18" stroke="#fff1a8" stroke-opacity="0.38" stroke-width="2"/>
+  </g>
+  <polygon points="100,12 176,56 176,144 100,188 24,144 24,56" fill="none" stroke="#ffd866" stroke-width="3"/>
+</svg>
