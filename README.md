@@ -36,4 +36,25 @@ end
 This package adapts Crucible contracts to Bumblebee/Nx/Axon. It does not own
 Trinity orchestration, hosted runtime supervision, or the base signal ontology.
 
+## Usage
+
+```elixir
+alias CrucibleBumblebee.{ForwardRunner, Qwen3Surface}
+alias CrucibleTap.TapPlan
+
+tap_plan =
+  TapPlan.new!([
+    [id: "hidden", signal_type: :middle_residuals, layers: [12]],
+    [id: "logits", signal_type: :final_logits, layers: [:final]]
+  ])
+
+surface = Qwen3Surface.surface(num_blocks: 28)
+
+{:ok, trace} =
+  ForwardRunner.run(predict_fun, inputs, tap_plan,
+    model_ref: "qwen3:local",
+    surface: surface
+  )
+```
+
 Documentation can be generated with `mix docs` and published to HexDocs.

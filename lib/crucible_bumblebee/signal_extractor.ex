@@ -1,0 +1,112 @@
+defmodule CrucibleBumblebee.SignalExtractor do
+  @moduledoc """
+  Extracts bounded Crucible signal records from Bumblebee-style model outputs.
+  """
+
+  alias CrucibleSignal.{SignalRef, TensorSummary}
+  alias CrucibleSignalTrace.{LayerTrajectory, SignalRecord}
+
+  def extract(outputs, attrs) when is_map(outputs) do
+    trace_id = Keyword.fetch!(attrs, :trace_id)
+    model_ref = Keyword.fetch!(attrs, :model_ref)
+
+    records =
+      []
+      |> maybe_add_logits(outputs, trace_id, model_ref)
+      |> maybe_add_hidden_states(outputs, trace_id, model_ref)
+      |> maybe_add_attentions(outputs, trace_id, model_ref)
+
+    {Enum.reverse(records), trajectory(records)}
+  end
+
+  defp maybe_add_logits(records, %{logits: logits}, trace_id, model_ref) do
+    [
+      record(trace_id, "final_logits", :final_logits, model_ref, logits, layer_index: :final)
+      | records
+    ]
+  end
+
+  defp maybe_add_logits(records, _outputs, _trace_id, _model_ref), do: records
+
+  defp maybe_add_hidden_states(records, %{hidden_states: hidden_states}, trace_id, model_ref) do
+    hidden_states
+    |> tuple_or_list()
+    |> Enum.with_index()
+    |> Enum.reduce(records, fn {hidden_state, index}, acc ->
+      type = hidden_type(index, length(tuple_or_list(hidden_states)))
+
+      [
+        record(trace_id, "hidden_states:#{index}", type, model_ref, hidden_state,
+          layer_index: index
+        )
+        | acc
+      ]
+    end)
+  end
+
+  defp maybe_add_hidden_states(records, _outputs, _trace_id, _model_ref), do: records
+
+  defp maybe_add_attentions(records, %{attentions: attentions}, trace_id, model_ref) do
+    attentions
+    |> tuple_or_list()
+    |> Enum.with_index()
+    |> Enum.reduce(records, fn {attention, index}, acc ->
+      [
+        record(trace_id, "attentions:#{index}", :attention_maps, model_ref, attention,
+          layer_index: index
+        )
+        | acc
+      ]
+    end)
+  end
+
+  defp maybe_add_attentions(records, _outputs, _trace_id, _model_ref), do: records
+
+  defp record(trace_id, signal_id, signal_type, model_ref, value, opts) do
+    summary = TensorSummary.summarize(value, entropy: signal_type == :final_logits)
+
+    SignalRecord.new!(
+      signal_ref:
+        SignalRef.new!(
+          trace_id: trace_id,
+          signal_id: signal_id,
+          signal_type: signal_type,
+          model_ref: model_ref,
+          layer_index: Keyword.get(opts, :layer_index),
+          dtype: summary.dtype,
+          shape: summary.shape
+        ),
+      summary: summary
+    )
+  end
+
+  defp trajectory(records) do
+    points =
+      records
+      |> Enum.filter(
+        &(&1.signal_ref.signal_type in [
+            :embeddings,
+            :early_residuals,
+            :middle_residuals,
+            :late_residuals
+          ])
+      )
+      |> Enum.map(fn record ->
+        %{
+          layer_index: record.signal_ref.layer_index,
+          signal_ref: record.signal_ref.signal_id,
+          norm: record.summary.l2_norm
+        }
+      end)
+
+    LayerTrajectory.new!(points)
+  end
+
+  defp tuple_or_list(value) when is_tuple(value), do: Tuple.to_list(value)
+  defp tuple_or_list(value) when is_list(value), do: value
+
+  defp hidden_type(0, _size), do: :embeddings
+  defp hidden_type(index, size) when index == size - 1, do: :late_residuals
+  defp hidden_type(index, _size) when index <= 2, do: :early_residuals
+  defp hidden_type(_index, _size), do: :middle_residuals
+end

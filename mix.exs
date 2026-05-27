@@ -38,6 +38,14 @@ defmodule CrucibleBumblebee.MixProject do
 
   defp deps do
     [
+      {:crucible_signal, path: "../crucible_signal"},
+      {:crucible_tap, path: "../crucible_tap"},
+      {:crucible_signal_trace, path: "../crucible_signal_trace"},
+      {:crucible_policy, path: "../crucible_policy"},
+      {:bumblebee, path: "../../elixir-nx/bumblebee", override: true},
+      {:axon, path: "../../elixir-nx/axon", override: true},
+      {:nx, path: "../../elixir-nx/nx/nx", override: true},
+      {:jason, "~> 1.4"},
       {:ex_doc, "~> 0.40.1", only: [:dev, :test], runtime: false}
     ]
   end
