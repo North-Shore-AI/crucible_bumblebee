@@ -3,14 +3,28 @@ defmodule CrucibleBumblebee.TraceWriter do
   V4 trace writer for native Bumblebee examples.
   """
 
+  alias CrucibleBumblebee.Artifacts
   alias CrucibleSignalTrace.JSONL
 
   def trace_dir do
-    System.get_env("CRUCIBLE_TRACE_DIR") || "tmp/crucible_v4"
+    System.get_env("CRUCIBLE_TRACE_DIR") || Artifacts.dir!(:native_traces)
   end
 
   def output_path(name, suffix) do
-    Path.join(trace_dir(), "#{name}.#{suffix}")
+    if System.get_env("CRUCIBLE_TRACE_DIR") do
+      Path.join(trace_dir(), "#{Artifacts.safe_name(name)}.#{suffix}")
+    else
+      case suffix do
+        "trace.jsonl" ->
+          Artifacts.trace_path(name)
+
+        "capability_report.json" ->
+          Artifacts.capability_report_path(name)
+
+        other ->
+          Path.join(trace_dir(), "#{Artifacts.safe_name(name)}.#{other}")
+      end
+    end
   end
 
   def reset!(path) do
