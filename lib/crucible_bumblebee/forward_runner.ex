@@ -26,7 +26,7 @@ defmodule CrucibleBumblebee.ForwardRunner do
          layer_trajectory: trajectory,
          final_logits: final_logits_ref(records),
          cache_summary: CacheSummary.summarize(Map.get(outputs, :cache)),
-         metadata: %{compiled_taps: compiled_taps}
+         metadata: %{compiled_taps: compiled_tap_summary(compiled_taps)}
        )}
     end
   end
@@ -38,5 +38,15 @@ defmodule CrucibleBumblebee.ForwardRunner do
       nil -> nil
       record -> record.signal_ref
     end
+  end
+
+  defp compiled_tap_summary(compiled_taps) do
+    %{
+      tap_plan_id: compiled_taps.tap_plan_id,
+      global_layer_options: Map.new(compiled_taps.global_layer_options),
+      hook_names: compiled_taps.hook_names,
+      matched_count: length(compiled_taps.matched),
+      unsupported_optional_count: length(compiled_taps.unsupported_optional)
+    }
   end
 end
