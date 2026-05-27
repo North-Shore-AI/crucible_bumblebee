@@ -3,7 +3,9 @@ defmodule CrucibleBumblebee.LiveMatrix do
   V5 live model/backend ladder runner.
   """
 
-  alias CrucibleBumblebee.{Artifacts, Live}
+  alias CrucibleBumblebee.{Artifacts, Backend, Live}
+
+  @backend_ladder [:binary, :exla_cpu, :torchx_cpu, :exla_cuda]
 
   @model_ladder [
     %{
@@ -66,6 +68,7 @@ defmodule CrucibleBumblebee.LiveMatrix do
   ]
 
   def model_ladder, do: @model_ladder
+  def backend_ladder, do: @backend_ladder
 
   def run_model_ladder(opts \\ []) do
     root = Keyword.get(opts, :artifact_root)
@@ -116,6 +119,37 @@ defmodule CrucibleBumblebee.LiveMatrix do
     %{
       ok: Enum.all?(rows, &(&1.result in ["passed", "blocked_expected"])),
       backend: backend,
+      rows: rows
+    }
+  end
+
+  def run_backend_ladder(opts \\ []) do
+    root = Keyword.get(opts, :artifact_root)
+    models = Keyword.get(opts, :models, @model_ladder)
+    backends = Keyword.get(opts, :backends, @backend_ladder)
+    backend_probe_fun = Keyword.get(opts, :backend_probe_fun, &Backend.prefer/1)
+    attempt_fun = Keyword.get(opts, :attempt_fun, &attempt_forward/3)
+
+    Artifacts.ensure_layout!(root: root)
+
+    rows =
+      for backend <- backends, model <- models do
+        row =
+          case backend_probe_fun.(backend) do
+            {:ok, selected_backend} ->
+              Backend.reset()
+              attempt_fun.(model, selected_backend, root)
+
+            {:error, reason} ->
+              backend_unavailable_row(model, backend, reason)
+          end
+
+        write_backend_ladder_row!(row, root)
+        row
+      end
+
+    %{
+      ok: Enum.all?(rows, &(&1.result in ["passed", "blocked_expected", "backend_unavailable"])),
       rows: rows
     }
   end
@@ -266,7 +300,19 @@ defmodule CrucibleBumblebee.LiveMatrix do
     Artifacts.append_jsonl!(
       :backend_matrix,
       "backend_ladder.jsonl",
-      Map.take(row, [:model_id, :backend, :model_loaded, :forward, :duration_ms, :result, :error]),
+      Map.take(row, [
+        :rung,
+        :model_id,
+        :family,
+        :backend,
+        :model_loaded,
+        :forward,
+        :generation,
+        :duration_ms,
+        :result,
+        :error,
+        :blocker
+      ]),
       root: root
     )
 
@@ -310,6 +356,58 @@ defmodule CrucibleBumblebee.LiveMatrix do
   defp write_generation_row!(row, root) do
     Artifacts.append_jsonl!(:generation_matrix, "generation_ladder.jsonl", row, root: root)
   end
+
+  defp backend_unavailable_row(model, backend, reason) do
+    %{
+      rung: model.rung,
+      model_id: model.model_id,
+      family: model.family,
+      backend: backend,
+      tokenizer_loaded: false,
+      model_loaded: false,
+      forward: false,
+      generation: false,
+      final_logits: false,
+      step_logits: false,
+      hidden_states: false,
+      attention: false,
+      duration_ms: 0,
+      result: "backend_unavailable",
+      error: inspect(reason),
+      blocker: json_safe(reason)
+    }
+  end
+
+  defp write_backend_ladder_row!(row, root) do
+    Artifacts.append_jsonl!(
+      :backend_matrix,
+      "backend_ladder.jsonl",
+      Map.take(row, [
+        :rung,
+        :model_id,
+        :family,
+        :backend,
+        :model_loaded,
+        :forward,
+        :generation,
+        :duration_ms,
+        :result,
+        :error,
+        :blocker
+      ]),
+      root: root
+    )
+  end
+
+  defp json_safe(value) when is_tuple(value),
+    do: value |> Tuple.to_list() |> Enum.map(&json_safe/1)
+
+  defp json_safe(value) when is_list(value), do: Enum.map(value, &json_safe/1)
+
+  defp json_safe(value) when is_map(value),
+    do: Map.new(value, fn {key, value} -> {key, json_safe(value)} end)
+
+  defp json_safe(value), do: value
 
   defp elapsed_ms(start_ms), do: System.monotonic_time(:millisecond) - start_ms
 end

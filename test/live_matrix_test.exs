@@ -96,4 +96,30 @@ defmodule CrucibleBumblebee.LiveMatrixTest do
     assert File.read!(Path.join([root, "generation_matrix", "generation_ladder.jsonl"])) =~
              "generation_step_logits"
   end
+
+  test "backend ladder records unavailable backend rows" do
+    root =
+      Path.join(
+        System.tmp_dir!(),
+        "crucible_bumblebee_backend_matrix_#{System.unique_integer([:positive])}"
+      )
+
+    on_exit(fn -> File.rm_rf!(root) end)
+
+    models = [%{rung: "Mtest", model_id: "fixture/model", family: :fixture}]
+
+    result =
+      LiveMatrix.run_backend_ladder(
+        artifact_root: root,
+        models: models,
+        backends: [:exla_cpu],
+        backend_probe_fun: fn :exla_cpu -> {:error, {:not_installed, :exla}} end
+      )
+
+    assert result.ok
+
+    text = File.read!(Path.join([root, "backend_matrix", "backend_ladder.jsonl"]))
+    assert text =~ "backend_unavailable"
+    assert text =~ "not_installed"
+  end
 end
