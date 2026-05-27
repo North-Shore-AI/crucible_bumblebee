@@ -54,7 +54,11 @@ defmodule CrucibleBumblebee.TraceWriter do
   end
 
   def signal_from_tensor(tensor, attrs) do
-    summary = Crucible.TensorSummary.compute(tensor, entropy: true, top_k: 10)
+    summary =
+      Crucible.TensorSummary.compute(tensor,
+        entropy: Map.get(attrs, :entropy?, true),
+        top_k: Map.get(attrs, :top_k, 10)
+      )
 
     %Crucible.SignalRecord{
       signal_id: Map.fetch!(attrs, :signal_id),

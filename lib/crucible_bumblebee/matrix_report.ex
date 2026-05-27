@@ -8,7 +8,8 @@ defmodule CrucibleBumblebee.MatrixReport do
   @reports [
     model_matrix: {"model_ladder.jsonl", "model_matrix.md", "Model Ladder Matrix"},
     backend_matrix: {"backend_ladder.jsonl", "backend_matrix.md", "Backend Ladder Matrix"},
-    signal_matrix: {"signal_ladder.jsonl", "signal_matrix.md", "Signal Ladder Matrix"},
+    signal_matrix:
+      {["signal_ladder.jsonl", "signal_probe.jsonl"], "signal_matrix.md", "Signal Ladder Matrix"},
     generation_matrix:
       {"generation_ladder.jsonl", "generation_matrix.md", "Generation Ladder Matrix"}
   ]
@@ -17,8 +18,13 @@ defmodule CrucibleBumblebee.MatrixReport do
     root = Keyword.get(opts, :artifact_root) || Artifacts.root(root: Keyword.get(opts, :root))
     Artifacts.ensure_layout!(root: root)
 
-    Enum.map(@reports, fn {directory, {source, target, title}} ->
-      rows = latest_rows(read_rows(Artifacts.path!(directory, source, root: root)))
+    Enum.map(@reports, fn {directory, {sources, target, title}} ->
+      rows =
+        sources
+        |> List.wrap()
+        |> Enum.flat_map(&read_rows(Artifacts.path!(directory, &1, root: root)))
+        |> latest_rows()
+
       path = Artifacts.path!(:reports, target, root: root)
       File.write!(path, markdown(title, rows))
       {directory, path}
