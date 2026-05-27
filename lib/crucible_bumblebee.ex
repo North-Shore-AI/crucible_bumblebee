@@ -11,6 +11,9 @@ defmodule CrucibleBumblebee do
   @doc "Returns the package version."
   def version, do: @version
 
-  @doc "Returns a Qwen3 model surface map."
+  @doc "Returns the generic example model surface map."
+  def example_surface(opts \\ []), do: CrucibleBumblebee.ExampleSurface.surface(opts)
+
+  @doc "Returns an example Qwen3-family model surface map."
   def qwen3_surface(opts \\ []), do: CrucibleBumblebee.Qwen3Surface.surface(opts)
 end

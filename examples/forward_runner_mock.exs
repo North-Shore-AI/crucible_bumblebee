@@ -1,5 +1,4 @@
 alias CrucibleBumblebee.{ExampleSurface, ForwardRunner}
-alias CrucibleSignalTrace.JSONL
 alias CrucibleTap.TapPlan
 
 tap_plan =
@@ -8,7 +7,7 @@ tap_plan =
       [id: "hidden", signal_type: :middle_residuals, layers: [0]],
       [id: "logits", signal_type: :final_logits, layers: [:final]]
     ],
-    plan_id: "first-slice-demo"
+    plan_id: "forward-runner-mock"
   )
 
 predict_fun = fn _inputs ->
@@ -26,24 +25,14 @@ end
 
 {:ok, trace} =
   ForwardRunner.run(predict_fun, %{}, tap_plan,
-    trace_id: "first-slice-trace",
+    trace_id: "trace-forward-runner-mock",
     model_ref: "model:fixture",
     surface: ExampleSurface.surface(num_blocks: 1)
   )
 
-{:ok, decision} = CruciblePolicy.decide(trace)
-
-path = Path.join(System.tmp_dir!(), "crucible_bumblebee_first_slice.jsonl")
-File.rm(path)
-
-:ok = JSONL.append(path, trace)
-:ok = JSONL.append(path, decision)
-
-IO.puts(
-  Jason.encode!(%{
-    trace_id: trace.trace_id,
-    signal_count: length(trace.signal_records),
-    selected_target: decision.selected_target,
-    jsonl_path: path
-  })
-)
+IO.inspect(%{
+  ok: true,
+  example: "forward_runner_mock",
+  signal_count: length(trace.signal_records),
+  lifecycle: trace.metadata.lifecycle
+})

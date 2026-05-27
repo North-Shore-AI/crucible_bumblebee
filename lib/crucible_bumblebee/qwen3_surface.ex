@@ -1,14 +1,73 @@
 defmodule CrucibleBumblebee.Qwen3Surface do
   @moduledoc """
-  Qwen3 layer-name surface map for the local Bumblebee implementation.
+  Example Qwen3-family layer-name surface map for Bumblebee.
+
+  This module is optional. Reusable runners consume the `ModelSurface`
+  behaviour and do not assume Qwen-family params or layer names.
   """
+
+  @behaviour CrucibleBumblebee.ModelSurface
 
   alias CrucibleBumblebee.ModelSurface
 
-  @doc "Builds the Qwen3 surface. Defaults to 28 blocks for Qwen3 0.6B."
+  @doc "Builds the example Qwen3-family surface."
   def surface(opts \\ []) do
     num_blocks = Keyword.get(opts, :num_blocks, 28)
-    ModelSurface.new!(:qwen3, nodes(num_blocks), %{num_blocks: num_blocks})
+    ModelSurface.from_module!(__MODULE__, Keyword.put(opts, :num_blocks, num_blocks))
+  end
+
+  @impl true
+  def id, do: :qwen3_example
+
+  @impl true
+  def model_family, do: :qwen3
+
+  @impl true
+  def capabilities(_opts \\ []) do
+    %{
+      hidden_states: true,
+      attentions: false,
+      named_hooks: true,
+      final_logits: true,
+      cache_metadata: true,
+      token_boundary_steering: true,
+      logits_processors: true,
+      logit_lens: true,
+      in_graph_steering: false
+    }
+  end
+
+  @impl true
+  def output_options(_compiled_plan), do: [output_hidden_states: true]
+
+  @impl true
+  def preflight(_model_info, opts) do
+    num_blocks = Keyword.get(opts, :num_blocks, 28)
+
+    {:ok,
+     %{
+       surface_id: id(),
+       model_family: model_family(),
+       nodes: Enum.map(nodes(num_blocks), & &1[:id]),
+       post_processing_extractors: [:final_logits, :hidden_states, :cache],
+       logit_lens: %{
+         final_norm: [:params, :output_norm],
+         unembedding: [:params, :language_modeling_head, :output, :kernel],
+         hidden_states: :outputs_hidden_states
+       },
+       unsupported: [:in_graph_steering]
+     }}
+  end
+
+  @impl true
+  def logit_lens_access(_model_info, params) when is_map(params) do
+    with {:ok, final_norm} <- fetch_path(params, [:output_norm]),
+         {:ok, unembedding} <- fetch_path(params, [:language_modeling_head, :output, :kernel]) do
+      {:ok,
+       %{final_norm: final_norm, unembedding: unembedding, hidden_states: :outputs_hidden_states}}
+    else
+      {:error, _reason} -> {:error, :unsupported}
+    end
   end
 
   def nodes(num_blocks) when is_integer(num_blocks) and num_blocks > 0 do
@@ -46,4 +105,16 @@ defmodule CrucibleBumblebee.Qwen3Surface do
       capture_modes: [:summary, :sample]
     ]
   end
+
+  defp fetch_path(value, []), do: {:ok, value}
+
+  defp fetch_path(value, [key | rest]) when is_map(value) do
+    cond do
+      Map.has_key?(value, key) -> fetch_path(Map.fetch!(value, key), rest)
+      Map.has_key?(value, to_string(key)) -> fetch_path(Map.fetch!(value, to_string(key)), rest)
+      true -> {:error, {:missing_path, key}}
+    end
+  end
+
+  defp fetch_path(_value, [key | _rest]), do: {:error, {:missing_path, key}}
 end

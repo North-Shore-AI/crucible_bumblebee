@@ -39,7 +39,7 @@ Trinity orchestration, hosted runtime supervision, or the base signal ontology.
 ## Usage
 
 ```elixir
-alias CrucibleBumblebee.{ForwardRunner, Qwen3Surface}
+alias CrucibleBumblebee.{ExampleSurface, ForwardRunner}
 alias CrucibleTap.TapPlan
 
 tap_plan =
@@ -48,13 +48,33 @@ tap_plan =
     [id: "logits", signal_type: :final_logits, layers: [:final]]
   ])
 
-surface = Qwen3Surface.surface(num_blocks: 28)
+surface = ExampleSurface.surface(num_blocks: 2)
 
 {:ok, trace} =
   ForwardRunner.run(predict_fun, inputs, tap_plan,
-    model_ref: "qwen3:local",
+    model_ref: "model:local",
     surface: surface
   )
 ```
+
+## Model Boundary
+
+The reusable runners consume `CrucibleBumblebee.ModelSurface`. Qwen-family
+support is provided as `Qwen3Surface`, an example surface module with its own
+preflight artifact. Other model families provide their own surface module and
+artifact; no runner assumes Qwen params paths or a 0.6B model.
+
+## Guides
+
+- [Quickstart](guides/quickstart.md)
+- [Concepts](guides/concepts.md)
+- [Model Surfaces](guides/model_surfaces.md)
+- [Preflight](guides/preflight.md)
+- [Forward Runner](guides/forward_runner.md)
+- [Generation Runner](guides/generation_runner.md)
+- [Backend](guides/backend.md)
+- [Working Examples](guides/working_examples.md)
+- [Testing](guides/testing.md)
+- [Bumblebee Generation Surface](docs/bumblebee_generation_surface.md)
 
 Documentation can be generated with `mix docs` and published to HexDocs.

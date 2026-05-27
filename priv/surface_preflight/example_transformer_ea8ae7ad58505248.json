@@ -1,0 +1,41 @@
+{
+  "unsupported": [],
+  "version": 1,
+  "nodes": [
+    "tokens.embedding",
+    "decoder.layers.0.attention.query",
+    "decoder.layers.0.attention.key",
+    "decoder.layers.0.attention.value",
+    "decoder.layers.0.attention.weights",
+    "decoder.layers.0.attention.output",
+    "decoder.layers.0.pre_attention_norm",
+    "decoder.layers.0.mlp.gate",
+    "decoder.layers.0.mlp.output",
+    "decoder.final_norm",
+    "lm_head.output"
+  ],
+  "logit_lens": {
+    "hidden_states": "outputs_hidden_states",
+    "final_norm": [
+      "params",
+      "decoder",
+      "final_norm"
+    ],
+    "unembedding": [
+      "params",
+      "lm_head",
+      "kernel"
+    ]
+  },
+  "model_family": "example_transformer",
+  "surface_id": "example_transformer",
+  "post_processing_extractors": [
+    "final_logits",
+    "hidden_states",
+    "attentions",
+    "cache"
+  ],
+  "dependency_fingerprint": "ea8ae7ad58505248",
+  "schema": "crucible_bumblebee.surface_preflight",
+  "surface_module": "CrucibleBumblebee.ExampleSurface"
+}

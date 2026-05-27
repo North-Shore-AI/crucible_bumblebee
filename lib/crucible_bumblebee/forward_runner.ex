@@ -3,31 +3,58 @@ defmodule CrucibleBumblebee.ForwardRunner do
   Runs a Bumblebee-style predict function and returns a Crucible forward trace.
   """
 
-  alias CrucibleBumblebee.{CacheSummary, Qwen3Surface, SignalExtractor, TapCompiler}
+  alias CrucibleBumblebee.{CacheSummary, ExampleSurface, Serving, SignalExtractor, TapCompiler}
   alias CrucibleSignalTrace.ForwardTrace
 
   def run(predict_fun, inputs, tap_plan, opts \\ []) when is_function(predict_fun, 1) do
+    with {:ok, serving} <- compile_serving(predict_fun, tap_plan, opts) do
+      run_serving(serving, inputs, opts)
+    end
+  end
+
+  def run_serving(%Serving{} = serving, inputs, opts \\ []) do
     trace_id = Keyword.get(opts, :trace_id, "trace:#{System.unique_integer([:positive])}")
+    model_ref = Keyword.get(opts, :model_ref, serving.model_ref || "bumblebee:model")
+    outputs = serving.predict_fun.(inputs)
+
+    {records, trajectory} =
+      SignalExtractor.extract(outputs, trace_id: trace_id, model_ref: model_ref)
+
+    {:ok,
+     ForwardTrace.new!(
+       trace_id: trace_id,
+       model_ref: model_ref,
+       tap_plan_ref: serving.compiled_taps.tap_plan_id,
+       signal_records: records,
+       layer_trajectory: trajectory,
+       final_logits: final_logits_ref(records),
+       cache_summary: CacheSummary.summarize(Map.get(outputs, :cache)),
+       metadata: %{
+         compiled_taps: compiled_tap_summary(serving.compiled_taps),
+         serving_ref: serving.serving_ref,
+         lifecycle: [:plan_compilation, :serving_compilation, :execution]
+       }
+     )}
+  end
+
+  def compile_serving(predict_fun, tap_plan, opts \\ []) when is_function(predict_fun, 1) do
     model_ref = Keyword.get(opts, :model_ref, "bumblebee:model")
-    surface = Keyword.get(opts, :surface, Qwen3Surface.surface(num_blocks: 1))
+    surface = Keyword.get(opts, :surface, ExampleSurface.surface(num_blocks: 1))
 
     with {:ok, compiled_taps} <- TapCompiler.compile(tap_plan, surface) do
-      outputs = predict_fun.(inputs)
-
-      {records, trajectory} =
-        SignalExtractor.extract(outputs, trace_id: trace_id, model_ref: model_ref)
-
       {:ok,
-       ForwardTrace.new!(
-         trace_id: trace_id,
+       %Serving{
+         serving_ref:
+           Keyword.get(opts, :serving_ref, "serving:#{System.unique_integer([:positive])}"),
          model_ref: model_ref,
-         tap_plan_ref: tap_plan.plan_id,
-         signal_records: records,
-         layer_trajectory: trajectory,
-         final_logits: final_logits_ref(records),
-         cache_summary: CacheSummary.summarize(Map.get(outputs, :cache)),
-         metadata: %{compiled_taps: compiled_tap_summary(compiled_taps)}
-       )}
+         surface: surface,
+         compiled_taps: compiled_taps,
+         predict_fun: predict_fun,
+         metadata: %{
+           hook_names: compiled_taps.hook_names,
+           lifecycle: [:plan_compilation, :serving_compilation]
+         }
+       }}
     end
   end
 
