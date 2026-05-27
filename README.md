@@ -73,8 +73,21 @@ artifact; no runner assumes Qwen params paths or a 0.6B model.
 - [Forward Runner](guides/forward_runner.md)
 - [Generation Runner](guides/generation_runner.md)
 - [Backend](guides/backend.md)
+- [Native Bumblebee Provider](guides/native_bumblebee_provider.md)
+- [Generation Capability Degradation](guides/generation_capability_degradation.md)
 - [Working Examples](guides/working_examples.md)
 - [Testing](guides/testing.md)
 - [Bumblebee Generation Surface](docs/bumblebee_generation_surface.md)
 
 Documentation can be generated with `mix docs` and published to HexDocs.
+
+## V4 Status
+
+Status: `native-live-gate-passing`.
+
+The native provider is bounded to `hf-internal-testing/tiny-random-gpt2`.
+`CRUCIBLE_BUMBLEBEE_LIVE=true mix run examples/model_forward_live.exs` loads a
+real Bumblebee model and tokenizer, runs a CPU forward pass, extracts real final
+logits, writes `tmp/crucible_v4/model_forward_live.trace.jsonl`, and writes the
+matching capability report. Generation currently degrades step-logit telemetry
+explicitly via `model_generation_live.exs`.
