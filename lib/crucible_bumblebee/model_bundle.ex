@@ -17,4 +17,6 @@ defmodule CrucibleBumblebee.ModelBundle do
     :spec,
     diagnostics: %{}
   ]
+
+  @type t :: %__MODULE__{}
 end

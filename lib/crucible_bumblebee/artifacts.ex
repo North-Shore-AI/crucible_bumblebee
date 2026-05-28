@@ -16,6 +16,7 @@ defmodule CrucibleBumblebee.Artifacts do
     backend_matrix: "backend_matrix",
     signal_matrix: "signal_matrix",
     generation_matrix: "generation_matrix",
+    internals_matrix: "internals_matrix",
     errors: "errors",
     graphs: "graphs",
     reports: "reports",
@@ -33,6 +34,7 @@ defmodule CrucibleBumblebee.Artifacts do
           | :backend_matrix
           | :signal_matrix
           | :generation_matrix
+          | :internals_matrix
           | :errors
           | :graphs
           | :reports
@@ -85,7 +87,13 @@ defmodule CrucibleBumblebee.Artifacts do
 
   @spec matrix_row_path(directory(), String.t(), keyword()) :: Path.t()
   def matrix_row_path(directory, name, opts \\ [])
-      when directory in [:model_matrix, :backend_matrix, :signal_matrix, :generation_matrix] do
+      when directory in [
+             :model_matrix,
+             :backend_matrix,
+             :signal_matrix,
+             :generation_matrix,
+             :internals_matrix
+           ] do
     path!(directory, "#{safe_name(name)}.jsonl", opts)
   end
 

@@ -11,7 +11,8 @@ defmodule CrucibleBumblebee.MatrixReport do
     signal_matrix:
       {["signal_ladder.jsonl", "signal_probe.jsonl"], "signal_matrix.md", "Signal Ladder Matrix"},
     generation_matrix:
-      {"generation_ladder.jsonl", "generation_matrix.md", "Generation Ladder Matrix"}
+      {"generation_ladder.jsonl", "generation_matrix.md", "Generation Ladder Matrix"},
+    internals_matrix: {"internals_ladder.jsonl", "internals_matrix.md", "Native Internals Matrix"}
   ]
 
   def write_from_artifacts!(opts \\ []) do
@@ -94,12 +95,20 @@ defmodule CrucibleBumblebee.MatrixReport do
       "hidden_states",
       "attention",
       "success_level",
+      "signal",
+      "status",
       "step_count",
       "generation_strategy",
       "stop_token_ids",
+      "generated_name",
+      "op_name",
+      "node_id",
+      "node_count",
+      "candidate_count",
       "duration_ms",
       "blocker",
       "error",
+      "reason",
       "trace"
     ]
 
