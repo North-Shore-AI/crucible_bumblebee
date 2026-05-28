@@ -3,7 +3,7 @@ defmodule CrucibleBumblebee.Artifacts do
   Shared artifact path and index helpers for native Bumblebee execution.
   """
 
-  @default_root "tmp/crucible_v5"
+  alias CrucibleBumblebee.Config
 
   @directories %{
     transcripts: "transcripts",
@@ -41,11 +41,7 @@ defmodule CrucibleBumblebee.Artifacts do
           | :git
 
   @spec root(keyword()) :: Path.t()
-  def root(opts \\ []) do
-    Keyword.get(opts, :root) ||
-      System.get_env("CRUCIBLE_ARTIFACT_ROOT") ||
-      @default_root
-  end
+  def root(opts \\ []), do: Config.artifact_root(opts)
 
   @spec directories() :: %{directory() => Path.t()}
   def directories, do: @directories

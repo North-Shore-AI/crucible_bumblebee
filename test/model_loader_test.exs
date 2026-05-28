@@ -1,30 +1,8 @@
 defmodule CrucibleBumblebee.ModelLoaderTest do
-  use ExUnit.Case, async: false
+  use ExUnit.Case, async: true
 
   alias CrucibleBumblebee.ModelLoader
   alias CrucibleBumblebee.ModelLoader.Options
-
-  setup do
-    keys = ~w(
-      CRUCIBLE_BUMBLEBEE_MODEL_ID
-      CRUCIBLE_BUMBLEBEE_TOKENIZER_ID
-      CRUCIBLE_BUMBLEBEE_BACKEND
-      CRUCIBLE_BACKEND
-      CRUCIBLE_BUMBLEBEE_REVISION
-      CRUCIBLE_BUMBLEBEE_OFFLINE
-      CRUCIBLE_HF_OFFLINE
-      CRUCIBLE_MODEL_CACHE_DIR
-      CRUCIBLE_PROMPT
-      CRUCIBLE_BUMBLEBEE_MAX_NEW_TOKENS
-      CRUCIBLE_BUMBLEBEE_SEED
-      CRUCIBLE_ARTIFACT_ROOT
-      CRUCIBLE_BUMBLEBEE_DIAGNOSTIC_PATH
-    )
-
-    previous = Map.new(keys, &{&1, System.get_env(&1)})
-    on_exit(fn -> Enum.each(previous, fn {key, value} -> restore_env(key, value) end) end)
-    :ok
-  end
 
   test "resolves model loader options from explicit values" do
     options =
@@ -50,12 +28,15 @@ defmodule CrucibleBumblebee.ModelLoaderTest do
   end
 
   test "resolves model loader options from environment" do
-    System.put_env("CRUCIBLE_BUMBLEBEE_MODEL_ID", "distilgpt2")
-    System.put_env("CRUCIBLE_BUMBLEBEE_BACKEND", "binary")
-    System.put_env("CRUCIBLE_BUMBLEBEE_OFFLINE", "true")
-    System.put_env("CRUCIBLE_BUMBLEBEE_MAX_NEW_TOKENS", "3")
+    env_reader = fn
+      "CRUCIBLE_BUMBLEBEE_MODEL_ID" -> "distilgpt2"
+      "CRUCIBLE_BUMBLEBEE_BACKEND" -> "binary"
+      "CRUCIBLE_BUMBLEBEE_OFFLINE" -> "true"
+      "CRUCIBLE_BUMBLEBEE_MAX_NEW_TOKENS" -> "3"
+      _name -> nil
+    end
 
-    options = Options.from_env()
+    options = Options.from_env([], env_reader)
 
     assert options.model_id == "distilgpt2"
     assert options.tokenizer_id == "distilgpt2"
@@ -105,7 +86,4 @@ defmodule CrucibleBumblebee.ModelLoaderTest do
     assert diagnostic.ok == false
     assert diagnostic.reason == {:unsupported_model_family, "facebook/opt-125m"}
   end
-
-  defp restore_env(key, nil), do: System.delete_env(key)
-  defp restore_env(key, value), do: System.put_env(key, value)
 end

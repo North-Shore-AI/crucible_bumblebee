@@ -1,4 +1,4 @@
-live? = System.get_env("CRUCIBLE_BUMBLEBEE_LIVE") in ["1", "true"]
+live? = CrucibleBumblebee.Config.live_enabled?()
 
 argv =
   case System.argv() do
@@ -32,7 +32,7 @@ end
 
 backend =
   opts
-  |> Keyword.get(:backend, System.get_env("CRUCIBLE_BUMBLEBEE_BACKEND") || "binary")
+  |> Keyword.get(:backend, CrucibleBumblebee.Config.backend("binary"))
   |> CrucibleBumblebee.ModelLoader.Options.normalize_backend()
 
 models =

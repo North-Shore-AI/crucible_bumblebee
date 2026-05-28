@@ -1,6 +1,8 @@
 defmodule CrucibleBumblebee.ModelLoader.Options do
   @moduledoc "Resolved model-loader options."
 
+  alias CrucibleBumblebee.Config
+
   @default_model_id "hf-internal-testing/tiny-random-gpt2"
   @default_prompt "Hi"
   @backend_values %{
@@ -35,23 +37,8 @@ defmodule CrucibleBumblebee.ModelLoader.Options do
 
   def default_model_id, do: @default_model_id
 
-  def from_env(overrides \\ []) do
-    new(
-      [
-        model_id: env("CRUCIBLE_BUMBLEBEE_MODEL_ID", @default_model_id),
-        tokenizer_id: env("CRUCIBLE_BUMBLEBEE_TOKENIZER_ID"),
-        revision: env("CRUCIBLE_BUMBLEBEE_REVISION"),
-        backend: env("CRUCIBLE_BUMBLEBEE_BACKEND", env("CRUCIBLE_BACKEND", "auto")),
-        offline?: truthy?(env("CRUCIBLE_BUMBLEBEE_OFFLINE", env("CRUCIBLE_HF_OFFLINE"))),
-        cache_dir: env("CRUCIBLE_MODEL_CACHE_DIR"),
-        prompt: env("CRUCIBLE_PROMPT", @default_prompt),
-        max_new_tokens: integer_env("CRUCIBLE_BUMBLEBEE_MAX_NEW_TOKENS", 8),
-        seed: integer_env("CRUCIBLE_BUMBLEBEE_SEED"),
-        artifact_root: env("CRUCIBLE_ARTIFACT_ROOT"),
-        diagnostic_path: env("CRUCIBLE_BUMBLEBEE_DIAGNOSTIC_PATH")
-      ]
-      |> Keyword.merge(overrides)
-    )
+  def from_env(overrides \\ [], env_reader \\ &Config.env/1) do
+    new(Config.model_loader_attrs(overrides, env_reader))
   end
 
   def new(attrs \\ []) when is_list(attrs) or is_map(attrs) do
@@ -113,22 +100,4 @@ defmodule CrucibleBumblebee.ModelLoader.Options do
   rescue
     ArgumentError -> Map.new(attrs)
   end
-
-  defp env(name), do: System.get_env(name)
-  defp env(name, default), do: System.get_env(name) || default
-
-  defp integer_env(name, default \\ nil) do
-    case System.get_env(name) do
-      nil ->
-        default
-
-      value ->
-        case Integer.parse(value) do
-          {integer, ""} -> integer
-          _other -> default
-        end
-    end
-  end
-
-  defp truthy?(value), do: value in [true, "1", "true", "TRUE", "yes", "YES"]
 end

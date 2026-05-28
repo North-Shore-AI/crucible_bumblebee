@@ -4,17 +4,19 @@ defmodule CrucibleBumblebee.TraceWriter do
   """
 
   alias CrucibleBumblebee.Artifacts
+  alias CrucibleBumblebee.Config
   alias CrucibleSignalTrace.JSONL
 
-  def trace_dir do
-    System.get_env("CRUCIBLE_TRACE_DIR") || Artifacts.dir!(:native_traces)
+  def trace_dir(opts \\ []) do
+    Config.trace_dir(opts) || Artifacts.dir!(:native_traces, root: Keyword.get(opts, :root))
   end
 
   def output_path(name, suffix, opts \\ []) do
     root = Keyword.get(opts, :root)
+    trace_dir = Config.trace_dir(opts)
 
-    if System.get_env("CRUCIBLE_TRACE_DIR") && is_nil(root) do
-      Path.join(trace_dir(), "#{Artifacts.safe_name(name)}.#{suffix}")
+    if trace_dir && is_nil(root) do
+      Path.join(trace_dir, "#{Artifacts.safe_name(name)}.#{suffix}")
     else
       case suffix do
         "trace.jsonl" ->

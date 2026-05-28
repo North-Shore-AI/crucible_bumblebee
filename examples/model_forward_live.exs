@@ -1,4 +1,4 @@
-live? = System.get_env("CRUCIBLE_BUMBLEBEE_LIVE") in ["1", "true"]
+live? = CrucibleBumblebee.Config.live_enabled?()
 gate? = "--gate" in System.argv()
 
 unless live? do
