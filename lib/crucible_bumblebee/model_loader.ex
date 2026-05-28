@@ -1,6 +1,6 @@
 defmodule CrucibleBumblebee.ModelLoader do
   @moduledoc """
-  Loads the bounded V4 Bumblebee model profile.
+  Loads configured V5 Bumblebee model profiles.
   """
 
   alias CrucibleBumblebee.{Backend, ModelBundle}

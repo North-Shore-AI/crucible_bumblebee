@@ -1,6 +1,6 @@
 defmodule CrucibleBumblebee.Surfaces.TinyGPT2Surface do
   @moduledoc """
-  Curated V4 surface for `hf-internal-testing/tiny-random-gpt2`.
+  Curated V5 control surface for `hf-internal-testing/tiny-random-gpt2`.
   """
 
   @behaviour CrucibleBumblebee.ModelSurface

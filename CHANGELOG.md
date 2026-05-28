@@ -4,9 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
-- Added the bounded V4 native tiny GPT-2 runner, model bundle/loader, curated
+- Added the initial native tiny GPT-2 runner, model bundle/loader, curated
   `TinyGPT2Surface`, preflight, trace writer, and live forward/generation
-  scripts writing `tmp/crucible_v4/*.jsonl`.
+  scripts.
 - Added explicit generation step-logit degradation reports.
 - Added V5 model, backend, signal, generation, and internals ladders over real
   Hugging Face/Bumblebee models with structured blockers for unsupported

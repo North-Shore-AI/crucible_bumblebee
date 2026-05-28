@@ -85,7 +85,7 @@ Documentation can be generated with `mix docs` and published to HexDocs.
 
 Status: `native-model-backend-signal-generation-internals-passing`.
 
-V5 expands the native provider beyond the V4 tiny-GPT2 final-logits slice. The
+V5 expands the native provider beyond the initial tiny-GPT2 control path. The
 model ladder exercised `hf-internal-testing/tiny-random-gpt2`, `gpt2`,
 `distilgpt2`, `hf-internal-testing/tiny-random-distilbert`, and
 `trl-internal-testing/tiny-Qwen3ForCausalLM` where Bumblebee exposes a runnable

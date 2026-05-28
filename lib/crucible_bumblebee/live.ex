@@ -1,6 +1,6 @@
 defmodule CrucibleBumblebee.Live do
   @moduledoc """
-  Standalone V4 native tiny GPT-2 live gates.
+  Standalone V5 native Bumblebee live gates.
   """
 
   alias CrucibleBumblebee.{ManualGeneration, ModelLoader, Preflight, TraceWriter}

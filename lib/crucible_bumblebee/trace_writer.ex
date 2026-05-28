@@ -1,6 +1,6 @@
 defmodule CrucibleBumblebee.TraceWriter do
   @moduledoc """
-  V4 trace writer for native Bumblebee examples.
+  V4/V5 trace writer for native Bumblebee examples.
   """
 
   alias CrucibleBumblebee.Artifacts
