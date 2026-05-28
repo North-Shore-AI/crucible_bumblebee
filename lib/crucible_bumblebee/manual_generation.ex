@@ -12,6 +12,12 @@ defmodule CrucibleBumblebee.ManualGeneration do
 
   def run(%ModelBundle{} = bundle, prompt, opts \\ []) when is_binary(prompt) do
     max_new_tokens = Keyword.get(opts, :max_new_tokens, 1)
+    strategy = Keyword.get(opts, :strategy, :greedy)
+    top_k = Keyword.get(opts, :top_k, 10)
+    temperature = Keyword.get(opts, :temperature, 1.0)
+    seed = Keyword.get(opts, :seed)
+    stop_token_ids = Keyword.get(opts, :stop_token_ids, [])
+    seed_random(seed)
 
     tokenizer =
       Bumblebee.configure(bundle.tokenizer,
@@ -20,12 +26,14 @@ defmodule CrucibleBumblebee.ManualGeneration do
 
     initial_inputs = Bumblebee.apply_tokenizer(tokenizer, prompt)
 
+    steps_range = if max_new_tokens > 0, do: 1..max_new_tokens, else: []
+
     {inputs, steps} =
-      Enum.reduce(1..max_new_tokens, {initial_inputs, []}, fn step_index, {inputs, steps} ->
+      Enum.reduce_while(steps_range, {initial_inputs, []}, fn step_index, {inputs, steps} ->
         outputs = Axon.predict(bundle.model, bundle.params, inputs)
         logits = outputs |> Live.fetch_logits!() |> Live.last_token_logits()
-        token_id = greedy_token_id(logits)
-        signal_summary = Crucible.TensorSummary.compute(logits, entropy: true, top_k: 10)
+        signal_summary = Crucible.TensorSummary.compute(logits, entropy: true, top_k: top_k)
+        token_id = select_token(logits, signal_summary, strategy, temperature)
 
         step = %{
           step_index: step_index,
@@ -38,7 +46,13 @@ defmodule CrucibleBumblebee.ManualGeneration do
           top_k: signal_summary.top_k
         }
 
-        {append_token(inputs, token_id), [step | steps]}
+        next = {append_token(inputs, token_id), [step | steps]}
+
+        if token_id in stop_token_ids do
+          {:halt, next}
+        else
+          {:cont, next}
+        end
       end)
 
     steps = Enum.reverse(steps)
@@ -72,6 +86,17 @@ defmodule CrucibleBumblebee.ManualGeneration do
     |> Nx.to_number()
   end
 
+  def select_token(logits, _summary, :greedy, _temperature), do: greedy_token_id(logits)
+
+  def select_token(_logits, %{top_k: top_k}, :top_k_sample, temperature)
+      when is_list(top_k) and top_k != [] do
+    top_k
+    |> top_k_weights(temperature)
+    |> weighted_choice()
+  end
+
+  def select_token(logits, _summary, _strategy, _temperature), do: greedy_token_id(logits)
+
   def public_step(step) when is_map(step) do
     step
     |> Map.drop([:logits])
@@ -104,4 +129,44 @@ defmodule CrucibleBumblebee.ManualGeneration do
   end
 
   defp margin(_top_k), do: nil
+
+  defp seed_random(nil), do: :ok
+
+  defp seed_random(seed) when is_integer(seed) do
+    :rand.seed(:exsss, {seed, seed + 1, seed + 2})
+    :ok
+  end
+
+  defp top_k_weights(top_k, temperature) do
+    temperature = if is_number(temperature) and temperature > 0, do: temperature, else: 1.0
+    max_logit = top_k |> Enum.map(&Map.fetch!(&1, :logit)) |> Enum.max()
+
+    weighted =
+      Enum.map(top_k, fn candidate ->
+        weight = :math.exp((Map.fetch!(candidate, :logit) - max_logit) / temperature)
+        {Map.fetch!(candidate, :token_id), weight}
+      end)
+
+    total = weighted |> Enum.map(&elem(&1, 1)) |> Enum.sum()
+    Enum.map(weighted, fn {token_id, weight} -> {token_id, weight / total} end)
+  end
+
+  defp weighted_choice(weighted) do
+    threshold = :rand.uniform()
+
+    weighted
+    |> Enum.reduce_while(0.0, fn {token_id, probability}, cumulative ->
+      next = cumulative + probability
+
+      if threshold <= next do
+        {:halt, token_id}
+      else
+        {:cont, next}
+      end
+    end)
+    |> case do
+      token_id when is_integer(token_id) -> token_id
+      _cumulative -> weighted |> List.last() |> elem(0)
+    end
+  end
 end

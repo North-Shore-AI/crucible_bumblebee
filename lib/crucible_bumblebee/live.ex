@@ -132,6 +132,8 @@ defmodule CrucibleBumblebee.Live do
     prompt = Keyword.get(opts, :prompt, options.prompt || @default_prompt)
     max_new_tokens = Keyword.get(opts, :max_new_tokens) || options.max_new_tokens || 1
     attempt_high_level? = Keyword.get(opts, :attempt_high_level_generation?, false)
+    generation_strategy = Keyword.get(opts, :generation_strategy, :greedy)
+    stop_token_ids = Keyword.get(opts, :stop_token_ids, [])
     {:ok, selected_backend} = CrucibleBumblebee.Backend.prefer(options.backend)
     trace_id = "tr_#{System.unique_integer([:positive])}"
     run_id = "run_#{System.unique_integer([:positive])}"
@@ -203,12 +205,17 @@ defmodule CrucibleBumblebee.Live do
       trace_id: trace_id,
       prompt_digest: CrucibleSignalTrace.Digest.prefixed_text(prompt),
       max_new_tokens: max_new_tokens,
-      decode_mode: :manual_greedy
+      decode_mode: generation_strategy
     )
 
     high_level_text = if attempt_high_level?, do: maybe_generate_text(bundle, prompt)
 
-    case ManualGeneration.run(bundle, prompt, max_new_tokens: max_new_tokens) do
+    case ManualGeneration.run(bundle, prompt,
+           max_new_tokens: max_new_tokens,
+           strategy: generation_strategy,
+           seed: options.seed,
+           stop_token_ids: stop_token_ids
+         ) do
       {:ok, manual} ->
         Enum.each(manual.steps, fn step ->
           signal =

@@ -21,6 +21,17 @@ defmodule CrucibleBumblebee.ManualGenerationTest do
     assert Nx.to_flat_list(updated["attention_mask"]) == [1, 1, 1]
   end
 
+  test "top-k sampling is deterministic when the random seed is set" do
+    summary = %{top_k: [%{token_id: 1, logit: 1.0}, %{token_id: 2, logit: 1.0}]}
+    :rand.seed(:exsss, {7, 8, 9})
+    first = ManualGeneration.select_token(Nx.tensor([0.0]), summary, :top_k_sample, 1.0)
+    :rand.seed(:exsss, {7, 8, 9})
+    second = ManualGeneration.select_token(Nx.tensor([0.0]), summary, :top_k_sample, 1.0)
+
+    assert first == second
+    assert first in [1, 2]
+  end
+
   test "public step drops raw logits and keeps bounded summary" do
     step = %{
       step_index: 1,

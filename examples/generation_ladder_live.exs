@@ -16,6 +16,9 @@ gate? = "--gate" in argv
       rungs: :string,
       max_new_tokens: :integer,
       high_level: :boolean,
+      strategy: :string,
+      seed: :integer,
+      stop_token_ids: :string,
       artifact_root: :string,
       gate: :boolean
     ]
@@ -57,12 +60,36 @@ models =
     end
   end)
 
+parse_strategy = fn
+  "top_k_sample" -> :top_k_sample
+  "top-k-sample" -> :top_k_sample
+  _strategy -> :greedy
+end
+
+parse_token_ids = fn
+  nil ->
+    []
+
+  value ->
+    value
+    |> String.split(",", trim: true)
+    |> Enum.flat_map(fn token ->
+      case Integer.parse(token) do
+        {id, ""} -> [id]
+        _other -> []
+      end
+    end)
+end
+
 result =
   CrucibleBumblebee.LiveMatrix.run_generation_ladder(
     backend: backend,
     models: models,
     max_new_tokens: Keyword.get(opts, :max_new_tokens, 1),
     attempt_high_level_generation?: Keyword.get(opts, :high_level, false),
+    generation_strategy: parse_strategy.(Keyword.get(opts, :strategy, "greedy")),
+    seed: Keyword.get(opts, :seed),
+    stop_token_ids: parse_token_ids.(Keyword.get(opts, :stop_token_ids)),
     artifact_root: Keyword.get(opts, :artifact_root)
   )
 

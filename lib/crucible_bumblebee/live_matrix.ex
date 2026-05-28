@@ -98,6 +98,9 @@ defmodule CrucibleBumblebee.LiveMatrix do
     models = Keyword.get(opts, :models, @model_ladder)
     max_new_tokens = Keyword.get(opts, :max_new_tokens, 1)
     attempt_high_level? = Keyword.get(opts, :attempt_high_level_generation?, false)
+    generation_strategy = Keyword.get(opts, :generation_strategy, :greedy)
+    seed = Keyword.get(opts, :seed)
+    stop_token_ids = Keyword.get(opts, :stop_token_ids, [])
     attempt_fun = Keyword.get(opts, :attempt_fun, &attempt_generation/4)
 
     Artifacts.ensure_layout!(root: root)
@@ -108,7 +111,13 @@ defmodule CrucibleBumblebee.LiveMatrix do
           attempt_fun.(
             model,
             backend,
-            [max_new_tokens: max_new_tokens, attempt_high_level_generation?: attempt_high_level?],
+            [
+              max_new_tokens: max_new_tokens,
+              attempt_high_level_generation?: attempt_high_level?,
+              generation_strategy: generation_strategy,
+              seed: seed,
+              stop_token_ids: stop_token_ids
+            ],
             root
           )
 
@@ -183,7 +192,10 @@ defmodule CrucibleBumblebee.LiveMatrix do
             artifact_root: root,
             max_new_tokens: max_new_tokens,
             attempt_high_level_generation?:
-              Keyword.get(generation_opts, :attempt_high_level_generation?, false)
+              Keyword.get(generation_opts, :attempt_high_level_generation?, false),
+            generation_strategy: Keyword.get(generation_opts, :generation_strategy, :greedy),
+            seed: Keyword.get(generation_opts, :seed),
+            stop_token_ids: Keyword.get(generation_opts, :stop_token_ids, [])
           )
 
         %{
@@ -191,6 +203,8 @@ defmodule CrucibleBumblebee.LiveMatrix do
           model_id: model.model_id,
           family: model.family,
           backend: backend,
+          generation_strategy: Keyword.get(generation_opts, :generation_strategy, :greedy),
+          stop_token_ids: Keyword.get(generation_opts, :stop_token_ids, []),
           generation: result.generation_supported?,
           success_level: result.generation_success_level,
           generated_tokens: Map.get(result, :generated_token_ids, []),

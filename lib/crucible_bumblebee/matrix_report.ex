@@ -69,7 +69,10 @@ defmodule CrucibleBumblebee.MatrixReport do
       Map.get(row, "rung"),
       Map.get(row, "model_id"),
       Map.get(row, "backend"),
-      Map.get(row, "signal")
+      Map.get(row, "signal"),
+      Map.get(row, "step_count"),
+      Map.get(row, "generation_strategy"),
+      Map.get(row, "stop_token_ids")
     ]
     |> Enum.reject(&is_nil/1)
     |> Enum.join("|")
@@ -92,6 +95,8 @@ defmodule CrucibleBumblebee.MatrixReport do
       "attention",
       "success_level",
       "step_count",
+      "generation_strategy",
+      "stop_token_ids",
       "duration_ms",
       "blocker",
       "error",
