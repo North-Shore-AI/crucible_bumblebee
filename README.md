@@ -52,7 +52,7 @@ surface = ExampleSurface.surface(num_blocks: 2)
 
 {:ok, trace} =
   ForwardRunner.run(predict_fun, inputs, tap_plan,
-    model_ref: "model:local",
+    model_id: "model:local",
     surface: surface
   )
 ```
@@ -81,11 +81,11 @@ artifact; no runner assumes Qwen params paths or a 0.6B model.
 
 Documentation can be generated with `mix docs` and published to HexDocs.
 
-## V5 Status
+## Status
 
 Status: `native-model-backend-signal-generation-internals-passing`.
 
-V5 expands the native provider beyond the initial tiny-GPT2 control path. The
+The native provider exercises real Hugging Face/Bumblebee models. The current
 model ladder exercised `hf-internal-testing/tiny-random-gpt2`, `gpt2`,
 `distilgpt2`, `hf-internal-testing/tiny-random-distilbert`, and
 `trl-internal-testing/tiny-Qwen3ForCausalLM` where Bumblebee exposes a runnable
@@ -100,7 +100,7 @@ logits where the model was causal. Hidden states, attentions, global
 intermediate logits, KV-cache metadata, and active mutation remain structured
 Bumblebee/Axon surface blockers unless a provider advertises those capabilities.
 
-V5 artifacts are written under `tmp/crucible_v5/`, including:
+Artifacts are written under `tmp/crucible_v5/`, including:
 
 ```text
 tmp/crucible_v5/reports/model_matrix.md

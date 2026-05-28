@@ -8,7 +8,7 @@ tap_plan =
       [id: "hidden", signal_type: :middle_residuals, layers: [0]],
       [id: "logits", signal_type: :final_logits, layers: [:final]]
     ],
-    plan_id: "first-slice-demo"
+    plan_id: "route-decision-trace-mock"
   )
 
 predict_fun = fn _inputs ->
@@ -26,14 +26,14 @@ end
 
 {:ok, trace} =
   ForwardRunner.run(predict_fun, %{}, tap_plan,
-    trace_id: "first-slice-trace",
-    model_ref: "model:fixture",
+    trace_id: "route-decision-trace",
+    model_id: "model:fixture",
     surface: ExampleSurface.surface(num_blocks: 1)
   )
 
 {:ok, decision} = CruciblePolicy.decide(trace)
 
-path = Path.join(System.tmp_dir!(), "crucible_bumblebee_first_slice.jsonl")
+path = Path.join(System.tmp_dir!(), "crucible_bumblebee_route_decision_trace.jsonl")
 File.rm(path)
 
 :ok = JSONL.append(path, trace)
@@ -42,7 +42,7 @@ File.rm(path)
 IO.puts(
   Jason.encode!(%{
     trace_id: trace.trace_id,
-    signal_count: length(trace.signal_records),
+    signal_count: length(trace.signals),
     selected_target: decision.selected_target,
     jsonl_path: path
   })

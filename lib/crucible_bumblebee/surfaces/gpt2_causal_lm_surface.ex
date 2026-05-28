@@ -5,7 +5,7 @@ defmodule CrucibleBumblebee.Surfaces.Gpt2CausalLMSurface do
   This intentionally describes the native signal surface that the current
   Bumblebee runner can prove across GPT-2-family models. Internals such as
   hidden states and attention weights remain explicit degraded capabilities
-  until a later V5 phase captures them from the Axon/Bumblebee graph.
+  until a later internals pass captures them from the Axon/Bumblebee graph.
   """
 
   @behaviour CrucibleBumblebee.ModelSurface

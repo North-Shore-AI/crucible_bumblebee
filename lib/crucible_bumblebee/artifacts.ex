@@ -1,6 +1,6 @@
 defmodule CrucibleBumblebee.Artifacts do
   @moduledoc """
-  Shared V5 artifact path and index helpers for native Bumblebee execution.
+  Shared artifact path and index helpers for native Bumblebee execution.
   """
 
   @default_root "tmp/crucible_v5"
@@ -43,7 +43,6 @@ defmodule CrucibleBumblebee.Artifacts do
   @spec root(keyword()) :: Path.t()
   def root(opts \\ []) do
     Keyword.get(opts, :root) ||
-      System.get_env("CRUCIBLE_V5_ARTIFACT_ROOT") ||
       System.get_env("CRUCIBLE_ARTIFACT_ROOT") ||
       @default_root
   end
@@ -153,7 +152,7 @@ defmodule CrucibleBumblebee.Artifacts do
 
   defp index_header do
     """
-    # Crucible V5 Artifact Index
+    # Crucible Artifact Index
 
     | Phase | Command | CWD | Env | Exit | Transcript | Artifacts | Git commit |
     | --- | --- | --- | --- | --- | --- | --- | --- |

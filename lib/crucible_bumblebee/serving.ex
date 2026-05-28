@@ -5,7 +5,7 @@ defmodule CrucibleBumblebee.Serving do
 
   @derive Jason.Encoder
   defstruct serving_ref: nil,
-            model_ref: nil,
+            model_id: nil,
             surface: nil,
             compiled_taps: nil,
             predict_fun: nil,

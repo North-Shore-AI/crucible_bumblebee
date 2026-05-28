@@ -1,6 +1,6 @@
 defmodule CrucibleBumblebee.SignalProbe do
   @moduledoc """
-  Native V5 signal probe over real Bumblebee model outputs.
+  Native signal probe over real Bumblebee model outputs.
   """
 
   alias CrucibleBumblebee.{

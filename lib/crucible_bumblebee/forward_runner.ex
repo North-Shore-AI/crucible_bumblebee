@@ -4,7 +4,7 @@ defmodule CrucibleBumblebee.ForwardRunner do
   """
 
   alias CrucibleBumblebee.{CacheSummary, ExampleSurface, Serving, SignalExtractor, TapCompiler}
-  alias CrucibleSignalTrace.ForwardTrace
+  alias Crucible.ForwardTrace
 
   def run(predict_fun, inputs, tap_plan, opts \\ []) when is_function(predict_fun, 1) do
     with {:ok, serving} <- compile_serving(predict_fun, tap_plan, opts) do
@@ -14,18 +14,18 @@ defmodule CrucibleBumblebee.ForwardRunner do
 
   def run_serving(%Serving{} = serving, inputs, opts \\ []) do
     trace_id = Keyword.get(opts, :trace_id, "trace:#{System.unique_integer([:positive])}")
-    model_ref = Keyword.get(opts, :model_ref, serving.model_ref || "bumblebee:model")
+    model_id = Keyword.get(opts, :model_id, serving.model_id || "bumblebee:model")
     outputs = serving.predict_fun.(inputs)
 
     {records, trajectory} =
-      SignalExtractor.extract(outputs, trace_id: trace_id, model_ref: model_ref)
+      SignalExtractor.extract(outputs, trace_id: trace_id, model_id: model_id)
 
     {:ok,
      ForwardTrace.new!(
        trace_id: trace_id,
-       model_ref: model_ref,
+       model_id: model_id,
        tap_plan_ref: serving.compiled_taps.tap_plan_id,
-       signal_records: records,
+       signals: records,
        layer_trajectory: trajectory,
        final_logits: final_logits_ref(records),
        cache_summary: CacheSummary.summarize(Map.get(outputs, :cache)),
@@ -38,7 +38,7 @@ defmodule CrucibleBumblebee.ForwardRunner do
   end
 
   def compile_serving(predict_fun, tap_plan, opts \\ []) when is_function(predict_fun, 1) do
-    model_ref = Keyword.get(opts, :model_ref, "bumblebee:model")
+    model_id = Keyword.get(opts, :model_id, "bumblebee:model")
     surface = Keyword.get(opts, :surface, ExampleSurface.surface(num_blocks: 1))
 
     with {:ok, compiled_taps} <- TapCompiler.compile(tap_plan, surface) do
@@ -46,7 +46,7 @@ defmodule CrucibleBumblebee.ForwardRunner do
        %Serving{
          serving_ref:
            Keyword.get(opts, :serving_ref, "serving:#{System.unique_integer([:positive])}"),
-         model_ref: model_ref,
+         model_id: model_id,
          surface: surface,
          compiled_taps: compiled_taps,
          predict_fun: predict_fun,
@@ -60,10 +60,10 @@ defmodule CrucibleBumblebee.ForwardRunner do
 
   defp final_logits_ref(records) do
     records
-    |> Enum.find(&(&1.signal_ref.signal_type == :final_logits))
+    |> Enum.find(&(&1.signal_type == :final_logits))
     |> case do
       nil -> nil
-      record -> record.signal_ref
+      record -> record
     end
   end
 

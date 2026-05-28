@@ -3,32 +3,32 @@ defmodule CrucibleBumblebee.SignalExtractor do
   Extracts bounded Crucible signal records from Bumblebee-style model outputs.
   """
 
-  alias CrucibleSignal.{SignalRef, TensorSummary}
-  alias CrucibleSignalTrace.{LayerTrajectory, SignalRecord}
+  alias Crucible.{SignalRecord, TensorSummary}
+  alias CrucibleSignalTrace.LayerTrajectory
 
   def extract(outputs, attrs) when is_map(outputs) do
     trace_id = Keyword.fetch!(attrs, :trace_id)
-    model_ref = Keyword.fetch!(attrs, :model_ref)
+    model_id = Keyword.fetch!(attrs, :model_id)
 
     records =
       []
-      |> maybe_add_logits(outputs, trace_id, model_ref)
-      |> maybe_add_hidden_states(outputs, trace_id, model_ref)
-      |> maybe_add_attentions(outputs, trace_id, model_ref)
+      |> maybe_add_logits(outputs, trace_id, model_id)
+      |> maybe_add_hidden_states(outputs, trace_id, model_id)
+      |> maybe_add_attentions(outputs, trace_id, model_id)
 
     {Enum.reverse(records), trajectory(records)}
   end
 
-  defp maybe_add_logits(records, %{logits: logits}, trace_id, model_ref) do
+  defp maybe_add_logits(records, %{logits: logits}, trace_id, model_id) do
     [
-      record(trace_id, "final_logits", :final_logits, model_ref, logits, layer_index: :final)
+      record(trace_id, "final_logits", :final_logits, model_id, logits, layer_index: :final)
       | records
     ]
   end
 
-  defp maybe_add_logits(records, _outputs, _trace_id, _model_ref), do: records
+  defp maybe_add_logits(records, _outputs, _trace_id, _model_id), do: records
 
-  defp maybe_add_hidden_states(records, %{hidden_states: hidden_states}, trace_id, model_ref) do
+  defp maybe_add_hidden_states(records, %{hidden_states: hidden_states}, trace_id, model_id) do
     hidden_states
     |> tuple_or_list()
     |> Enum.with_index()
@@ -36,7 +36,7 @@ defmodule CrucibleBumblebee.SignalExtractor do
       type = hidden_type(index, length(tuple_or_list(hidden_states)))
 
       [
-        record(trace_id, "hidden_states:#{index}", type, model_ref, hidden_state,
+        record(trace_id, "hidden_states:#{index}", type, model_id, hidden_state,
           layer_index: index
         )
         | acc
@@ -44,15 +44,15 @@ defmodule CrucibleBumblebee.SignalExtractor do
     end)
   end
 
-  defp maybe_add_hidden_states(records, _outputs, _trace_id, _model_ref), do: records
+  defp maybe_add_hidden_states(records, _outputs, _trace_id, _model_id), do: records
 
-  defp maybe_add_attentions(records, %{attentions: attentions}, trace_id, model_ref) do
+  defp maybe_add_attentions(records, %{attentions: attentions}, trace_id, model_id) do
     attentions
     |> tuple_or_list()
     |> Enum.with_index()
     |> Enum.reduce(records, fn {attention, index}, acc ->
       [
-        record(trace_id, "attentions:#{index}", :attention_maps, model_ref, attention,
+        record(trace_id, "attentions:#{index}", :attention_maps, model_id, attention,
           layer_index: index
         )
         | acc
@@ -60,23 +60,21 @@ defmodule CrucibleBumblebee.SignalExtractor do
     end)
   end
 
-  defp maybe_add_attentions(records, _outputs, _trace_id, _model_ref), do: records
+  defp maybe_add_attentions(records, _outputs, _trace_id, _model_id), do: records
 
-  defp record(trace_id, signal_id, signal_type, model_ref, value, opts) do
-    summary = TensorSummary.summarize(value, entropy: signal_type == :final_logits)
+  defp record(trace_id, signal_id, signal_type, model_id, value, opts) do
+    summary = TensorSummary.compute(value, entropy: signal_type == :final_logits)
 
     SignalRecord.new!(
-      signal_ref:
-        SignalRef.new!(
-          trace_id: trace_id,
-          signal_id: signal_id,
-          signal_type: signal_type,
-          model_ref: model_ref,
-          layer_index: Keyword.get(opts, :layer_index),
-          dtype: summary.dtype,
-          shape: summary.shape
-        ),
-      summary: summary
+      trace_id: trace_id,
+      signal_id: signal_id,
+      signal_type: signal_type,
+      model_id: model_id,
+      layer_index: Keyword.get(opts, :layer_index),
+      dtype: summary.dtype,
+      shape: summary.shape,
+      rank: summary.rank,
+      tensor_summary: summary
     )
   end
 
@@ -84,7 +82,7 @@ defmodule CrucibleBumblebee.SignalExtractor do
     points =
       records
       |> Enum.filter(
-        &(&1.signal_ref.signal_type in [
+        &(&1.signal_type in [
             :embeddings,
             :early_residuals,
             :middle_residuals,
@@ -93,9 +91,9 @@ defmodule CrucibleBumblebee.SignalExtractor do
       )
       |> Enum.map(fn record ->
         %{
-          layer_index: record.signal_ref.layer_index,
-          signal_ref: record.signal_ref.signal_id,
-          norm: record.summary.l2_norm
+          layer_index: record.layer_index,
+          signal_ref: record.signal_id,
+          norm: record.tensor_summary.norm_l2
         }
       end)
 

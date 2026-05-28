@@ -26,13 +26,13 @@ end
 {:ok, trace} =
   ForwardRunner.run(predict_fun, %{}, tap_plan,
     trace_id: "trace-forward-runner-mock",
-    model_ref: "model:fixture",
+    model_id: "model:fixture",
     surface: ExampleSurface.surface(num_blocks: 1)
   )
 
 IO.inspect(%{
   ok: true,
   example: "forward_runner_mock",
-  signal_count: length(trace.signal_records),
+  signal_count: length(trace.signals),
   lifecycle: trace.metadata.lifecycle
 })

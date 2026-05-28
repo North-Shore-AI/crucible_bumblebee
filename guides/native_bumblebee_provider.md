@@ -1,13 +1,13 @@
 # Native Bumblebee Provider
 
-Purpose: run the V5 native Elixir/Bumblebee provider against the real model
+Purpose: run the native Elixir/Bumblebee provider against the real model
 ladder.
 
 ## What this covers
 
-This guide covers the CPU live forward gate for the V5 model ladder. The gate
+This guide covers the CPU live forward gate for the model ladder. The gate
 proves model/tokenizer loading, real tensor execution, final-logits extraction,
-V5 JSONL emission, matrix rows, and capability report emission where Bumblebee
+JSONL emission, matrix rows, and capability report emission where Bumblebee
 exposes a runnable surface.
 
 ## Quickstart

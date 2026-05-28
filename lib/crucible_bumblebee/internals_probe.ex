@@ -1,6 +1,6 @@
 defmodule CrucibleBumblebee.InternalsProbe do
   @moduledoc """
-  V5 native internals probe.
+  Native internals probe.
 
   The probe dumps Axon graph metadata, selects concrete hook candidates, and
   attempts a passive hooked forward pass. Captured values are summarized only;

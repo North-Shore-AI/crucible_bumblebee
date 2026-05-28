@@ -4,7 +4,7 @@ defmodule CrucibleBumblebee.ManualGeneration do
 
   Bumblebee's high-level generation serving returns decoded text, but it does
   not expose per-step logits through the current runner. This module provides
-  the V5 fallback path: run the model once per generated token, greedily append
+  the explicit manual path: run the model once per generated token, greedily append
   the selected token, and return bounded summaries for each step.
   """
 

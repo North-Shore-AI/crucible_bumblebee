@@ -1,10 +1,10 @@
 # Generation Capability Degradation
 
-Purpose: explain V5 generation behavior and capability degradation.
+Purpose: explain generation behavior and capability degradation.
 
 ## What this covers
 
-`model_generation_live.exs` loads the configured real model profile. V5 first
+`model_generation_live.exs` loads the configured real model profile. It first
 attempts the high-level Bumblebee generation surface, then uses a manual
 autoregressive forward loop when that surface hides step logits. If a signal
 still cannot be captured, the runner writes an explicit degraded capability

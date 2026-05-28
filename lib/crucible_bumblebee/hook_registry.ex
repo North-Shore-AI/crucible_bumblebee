@@ -1,6 +1,6 @@
 defmodule CrucibleBumblebee.HookRegistry do
   @moduledoc """
-  Axon graph and Crucible surface hook registry for V5 internals probes.
+  Axon graph and Crucible surface hook registry for internals probes.
 
   The registry reports what is actually present in the loaded Axon graph. It
   does not infer that a research-level signal is available unless a concrete

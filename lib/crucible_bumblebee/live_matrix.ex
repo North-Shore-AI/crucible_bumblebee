@@ -1,6 +1,6 @@
 defmodule CrucibleBumblebee.LiveMatrix do
   @moduledoc """
-  V5 live model/backend ladder runner.
+  Live model/backend ladder runner.
   """
 
   alias CrucibleBumblebee.{Artifacts, Backend, Live}

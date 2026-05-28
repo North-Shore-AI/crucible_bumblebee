@@ -13,7 +13,7 @@ defmodule CrucibleBumblebeeTest do
   }
 
   alias CruciblePolicy.SteeringPlan
-  alias CrucibleSignalTrace.ForwardTrace
+  alias Crucible.ForwardTrace
   alias CrucibleTap.TapPlan
 
   test "exposes package version" do
@@ -64,9 +64,9 @@ defmodule CrucibleBumblebeeTest do
   test "signal extractor builds records and layer trajectory from fixture outputs" do
     {records, trajectory} =
       fixture_outputs()
-      |> SignalExtractor.extract(trace_id: "trace-1", model_ref: "fixture")
+      |> SignalExtractor.extract(trace_id: "trace-1", model_id: "fixture")
 
-    signal_types = Enum.map(records, & &1.signal_ref.signal_type)
+    signal_types = Enum.map(records, & &1.signal_type)
 
     assert :final_logits in signal_types
     assert :embeddings in signal_types
@@ -89,7 +89,7 @@ defmodule CrucibleBumblebeeTest do
     assert {:ok, %ForwardTrace{} = trace} =
              ForwardRunner.run(predict_fun, %{}, plan,
                trace_id: "trace-run",
-               model_ref: "fixture",
+               model_id: "fixture",
                surface: ExampleSurface.surface(num_blocks: 1)
              )
 

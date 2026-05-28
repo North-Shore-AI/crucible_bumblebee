@@ -3,7 +3,7 @@ defmodule CrucibleBumblebee.LiveMatrixTest do
 
   alias CrucibleBumblebee.LiveMatrix
 
-  test "model ladder names all required V5 rungs" do
+  test "model ladder names all required rungs" do
     assert LiveMatrix.model_ladder() |> Enum.map(& &1.rung) == ~w(M0 M1 M2 M3 M4 M5 M6)
     assert Enum.find(LiveMatrix.model_ladder(), &(&1.model_id == "gpt2"))
     assert Enum.find(LiveMatrix.model_ladder(), &(&1.family == :qwen3))

@@ -1,5 +1,5 @@
 defmodule CrucibleBumblebee.ModelLoader.Options do
-  @moduledoc "Resolved V5 model-loader options."
+  @moduledoc "Resolved model-loader options."
 
   @default_model_id "hf-internal-testing/tiny-random-gpt2"
   @default_prompt "Hi"
@@ -47,7 +47,7 @@ defmodule CrucibleBumblebee.ModelLoader.Options do
         prompt: env("CRUCIBLE_PROMPT", @default_prompt),
         max_new_tokens: integer_env("CRUCIBLE_BUMBLEBEE_MAX_NEW_TOKENS", 8),
         seed: integer_env("CRUCIBLE_BUMBLEBEE_SEED"),
-        artifact_root: env("CRUCIBLE_V5_ARTIFACT_ROOT", env("CRUCIBLE_ARTIFACT_ROOT")),
+        artifact_root: env("CRUCIBLE_ARTIFACT_ROOT"),
         diagnostic_path: env("CRUCIBLE_BUMBLEBEE_DIAGNOSTIC_PATH")
       ]
       |> Keyword.merge(overrides)

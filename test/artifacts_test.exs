@@ -4,7 +4,7 @@ defmodule CrucibleBumblebee.ArtifactsTest do
   alias CrucibleBumblebee.Artifacts
 
   setup do
-    previous_root = System.get_env("CRUCIBLE_V5_ARTIFACT_ROOT")
+    previous_root = System.get_env("CRUCIBLE_ARTIFACT_ROOT")
 
     root =
       Path.join(
@@ -12,17 +12,17 @@ defmodule CrucibleBumblebee.ArtifactsTest do
         "crucible_bumblebee_artifacts_#{System.unique_integer([:positive])}"
       )
 
-    System.put_env("CRUCIBLE_V5_ARTIFACT_ROOT", root)
+    System.put_env("CRUCIBLE_ARTIFACT_ROOT", root)
 
     on_exit(fn ->
-      restore_env("CRUCIBLE_V5_ARTIFACT_ROOT", previous_root)
+      restore_env("CRUCIBLE_ARTIFACT_ROOT", previous_root)
       File.rm_rf!(root)
     end)
 
     {:ok, root: root}
   end
 
-  test "ensures the V5 artifact directory layout", %{root: root} do
+  test "ensures the artifact directory layout", %{root: root} do
     assert Artifacts.ensure_layout!() == root
 
     for directory <- Artifacts.directories() |> Map.values() do

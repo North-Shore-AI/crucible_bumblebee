@@ -1,6 +1,6 @@
 defmodule CrucibleBumblebee.Live do
   @moduledoc """
-  Standalone V5 native Bumblebee live gates.
+  Standalone native Bumblebee live gates.
   """
 
   alias CrucibleBumblebee.{ManualGeneration, ModelLoader, Preflight, TraceWriter}
@@ -16,8 +16,11 @@ defmodule CrucibleBumblebee.Live do
     {:ok, selected_backend} = CrucibleBumblebee.Backend.prefer(options.backend)
     trace_id = "tr_#{System.unique_integer([:positive])}"
     run_id = "run_#{System.unique_integer([:positive])}"
-    trace_path = TraceWriter.output_path(name, "trace.jsonl")
-    report_path = TraceWriter.output_path(name, "capability_report.json")
+    trace_path = TraceWriter.output_path(name, "trace.jsonl", root: options.artifact_root)
+
+    report_path =
+      TraceWriter.output_path(name, "capability_report.json", root: options.artifact_root)
+
     TraceWriter.reset!(trace_path)
 
     start = System.monotonic_time(:millisecond)
@@ -137,8 +140,11 @@ defmodule CrucibleBumblebee.Live do
     {:ok, selected_backend} = CrucibleBumblebee.Backend.prefer(options.backend)
     trace_id = "tr_#{System.unique_integer([:positive])}"
     run_id = "run_#{System.unique_integer([:positive])}"
-    trace_path = TraceWriter.output_path(name, "trace.jsonl")
-    report_path = TraceWriter.output_path(name, "capability_report.json")
+    trace_path = TraceWriter.output_path(name, "trace.jsonl", root: options.artifact_root)
+
+    report_path =
+      TraceWriter.output_path(name, "capability_report.json", root: options.artifact_root)
+
     TraceWriter.reset!(trace_path)
 
     TraceWriter.write!(trace_path, :trace_start,

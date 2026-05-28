@@ -1,6 +1,6 @@
 defmodule CrucibleBumblebee.MatrixReport do
   @moduledoc """
-  Writes human-readable V5 matrix reports from JSONL artifact rows.
+  Writes human-readable matrix reports from JSONL artifact rows.
   """
 
   alias CrucibleBumblebee.Artifacts

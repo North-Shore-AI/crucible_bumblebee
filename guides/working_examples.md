@@ -4,6 +4,7 @@ Run mock examples:
 
 ```bash
 mix run examples/forward_runner_mock.exs
+mix run examples/route_decision_trace_mock.exs
 mix run examples/logit_steering_mock.exs
 ```
 
