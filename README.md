@@ -81,13 +81,31 @@ artifact; no runner assumes Qwen params paths or a 0.6B model.
 
 Documentation can be generated with `mix docs` and published to HexDocs.
 
-## V4 Status
+## V5 Status
 
-Status: `native-live-gate-passing`.
+Status: `native-model-backend-signal-generation-internals-passing`.
 
-The native provider is bounded to `hf-internal-testing/tiny-random-gpt2`.
-`CRUCIBLE_BUMBLEBEE_LIVE=true mix run examples/model_forward_live.exs` loads a
-real Bumblebee model and tokenizer, runs a CPU forward pass, extracts real final
-logits, writes `tmp/crucible_v4/model_forward_live.trace.jsonl`, and writes the
-matching capability report. Generation currently degrades step-logit telemetry
-explicitly via `model_generation_live.exs`.
+V5 expands the native provider beyond the V4 tiny-GPT2 final-logits slice. The
+model ladder exercised `hf-internal-testing/tiny-random-gpt2`, `gpt2`,
+`distilgpt2`, `hf-internal-testing/tiny-random-distilbert`, and
+`trl-internal-testing/tiny-Qwen3ForCausalLM` where Bumblebee exposes a runnable
+surface. Unsupported OPT and non-causal generation paths are recorded as
+structured blockers.
+
+The Binary backend ran locally. EXLA CPU/CUDA and Torchx were recorded as
+unavailable on the local Elixir stack for this run. The signal/generation gates
+captured input IDs, attention masks, final logits, top-k, entropy, margin,
+backend events, generated tokens, and manual autoregressive generation-step
+logits where the model was causal. Hidden states, attentions, global
+intermediate logits, KV-cache metadata, and active mutation remain structured
+Bumblebee/Axon surface blockers unless a provider advertises those capabilities.
+
+V5 artifacts are written under `tmp/crucible_v5/`, including:
+
+```text
+tmp/crucible_v5/reports/model_matrix.md
+tmp/crucible_v5/reports/backend_matrix.md
+tmp/crucible_v5/reports/signal_matrix.md
+tmp/crucible_v5/reports/generation_matrix.md
+tmp/crucible_v5/reports/internals_matrix.md
+```

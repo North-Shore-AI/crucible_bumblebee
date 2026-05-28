@@ -12,4 +12,6 @@ Live examples skip cleanly unless `CRUCIBLE_BUMBLEBEE_LIVE=1` is set:
 ```bash
 mix run examples/model_forward_live.exs
 mix run examples/model_generation_live.exs
+mix run examples/signal_probe_live.exs
+mix run examples/internals_probe_live.exs
 ```
