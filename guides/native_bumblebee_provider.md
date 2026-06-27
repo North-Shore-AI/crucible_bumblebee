@@ -63,6 +63,27 @@ Canonical examples emitted by the native provider:
 Required taps for `blocks.N.attn.hook_q`, `hook_k`, or `hook_v` fail closed until
 deep Bumblebee instrumentation is enabled.
 
+## Logit Lens
+
+For models whose surface exposes `logit_lens_access/2`,
+`CrucibleBumblebee.LogitLensRunner.project_outputs/5` can project raw
+`hidden_states` returned by Bumblebee:
+
+```elixir
+{:ok, {logits, labels}} =
+  CrucibleBumblebee.LogitLensRunner.project_outputs(
+    outputs,
+    surface,
+    %{n_layers: 12},
+    params
+  )
+```
+
+`intermediate_records_from_outputs/6` emits bounded
+`:logit_lens_intermediate` signal records. A summary-only trace returns
+`:raw_activations_required`; use trace-backed raw tensor refs or the in-memory
+output path for real projections.
+
 ## Related guides
 
 - [Generation Capability Degradation](generation_capability_degradation.md)

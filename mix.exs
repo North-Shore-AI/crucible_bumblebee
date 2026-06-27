@@ -42,6 +42,7 @@ defmodule CrucibleBumblebee.MixProject do
       {:crucible_signal, path: "../crucible_signal"},
       {:crucible_tap, path: "../crucible_tap"},
       {:crucible_signal_trace, path: "../crucible_signal_trace"},
+      {:crucible_mechinterp, path: "../crucible_mechinterp"},
       {:crucible_policy, path: "../crucible_policy"},
       {:nx, "~> 0.12", override: true},
       {:axon, "~> 0.7"},

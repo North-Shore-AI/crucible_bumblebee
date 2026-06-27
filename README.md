@@ -79,6 +79,11 @@ instrumentation can emit the actual tensors. Required Q/K/V read taps therefore
 fail closed with explicit capability reasons instead of compiling into a trace
 that cannot contain those activations.
 
+`CrucibleBumblebee.LogitLensRunner` projects raw in-memory hidden states through
+surface-declared logit-lens parameter access. Summary-only traces do not
+masquerade as raw activation caches; trace projection requires raw tensor refs
+or an eager tensor resolver.
+
 ## Guides
 
 - [Quickstart](guides/quickstart.md)
