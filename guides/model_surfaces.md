@@ -27,4 +27,4 @@ Surface modules for other model families should only copy those `:read`
 capabilities after their forward path returns the corresponding tensors.
 
 The current fork pin is
-`North-Shore-AI/bumblebee@ba39a747ee5749ba0639190ee92ca3d976da8907`.
+`North-Shore-AI/bumblebee@cbe271afafcacff04d298046f4b11711712b4123`.

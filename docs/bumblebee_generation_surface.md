@@ -2,7 +2,7 @@
 
 Pinned dependency surface:
 
-- Bumblebee source/ref: `North-Shore-AI/bumblebee@068fb2958672706dfc2f8c2b2d9b2c88bffc540a`
+- Bumblebee source/ref: `North-Shore-AI/bumblebee@cbe271afafcacff04d298046f4b11711712b4123`
 - Nx lock version: `0.12.1`
 - Axon lock version: `0.8.1`
 

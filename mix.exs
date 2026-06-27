@@ -3,7 +3,7 @@ defmodule CrucibleBumblebee.MixProject do
 
   @version "0.1.0"
   @source_url "https://github.com/North-Shore-AI/crucible_bumblebee"
-  @bumblebee_ref "87b6e8e8d78485e3fddebf9fadc73b7abaae5897"
+  @bumblebee_ref "cbe271afafcacff04d298046f4b11711712b4123"
 
   def project do
     [

@@ -80,6 +80,48 @@ defmodule CrucibleBumblebee.EMLXQwen3 do
   end
 
   @doc """
+  Registry-compatible provider/model support metadata for pinned Qwen3 artifacts.
+
+  The return value is a plain map so `crucible_model_registry` can consume it
+  without adding an EMLX or Bumblebee runtime dependency.
+  """
+  def provider_compatibility(opts \\ []) do
+    capabilities = capabilities(opts)
+
+    %{
+      provider_kind: :emlx_qwen3,
+      model_family: :qwen3,
+      runtime_profile: :local_emlx,
+      supported_signals: [
+        :final_logits,
+        :generation_step_logits,
+        :cache_metadata,
+        :residual_stream,
+        :attention_q,
+        :attention_k,
+        :attention_v,
+        :attention_scores,
+        :attention_weights,
+        :head_outputs,
+        :mlp_activation,
+        :norm_telemetry
+      ],
+      supported_activations: Map.keys(capabilities.activations),
+      supported_capture_groups: capabilities.capture_groups,
+      supported_generation_features: [:kv_cache_generation_trace, :cache_metadata],
+      supported_active_controls: [:residual_intervention],
+      unsupported_active_controls: [:head_ablation],
+      unsupported_capture_groups: [],
+      unsupported_activations: [],
+      metadata: %{
+        dependency: dependency_pin(),
+        surface_id: :emlx_qwen3,
+        host_sync_required_for_captures: false
+      }
+    }
+  end
+
+  @doc """
   Normalizes an `EMLXAxon.Qwen3.Generate.generate_trace/3` result.
   """
   def normalize_generation_trace(trace, opts \\ [])

@@ -21,6 +21,19 @@ defmodule CrucibleBumblebee.EMLXQwen3Test do
            end)
   end
 
+  test "exports registry-compatible model internals metadata" do
+    compatibility = EMLXQwen3.provider_compatibility(num_blocks: 1)
+
+    assert compatibility.provider_kind == :emlx_qwen3
+    assert compatibility.model_family == :qwen3
+    assert :attention_qkv in compatibility.supported_capture_groups
+    assert :kv_cache_generation_trace in compatibility.supported_generation_features
+    assert :residual_intervention in compatibility.supported_active_controls
+    assert :head_ablation in compatibility.unsupported_active_controls
+    assert "blocks.0.attn.hook_q" in compatibility.supported_activations
+    assert "unembed.hook_logits" in compatibility.supported_activations
+  end
+
   test "normalizes EMLX generation traces and redacts public steps" do
     trace = tiny_trace()
 
