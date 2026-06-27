@@ -90,6 +90,7 @@ or an eager tensor resolver.
 - [Model Surfaces](guides/model_surfaces.md)
 - [Preflight](guides/preflight.md)
 - [Forward Runner](guides/forward_runner.md)
+- [Interventions](guides/interventions.md)
 - [Generation Runner](guides/generation_runner.md)
 - [Backend](guides/backend.md)
 - [Native Bumblebee Provider](guides/native_bumblebee_provider.md)
