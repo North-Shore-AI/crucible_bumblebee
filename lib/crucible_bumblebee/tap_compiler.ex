@@ -62,6 +62,11 @@ defmodule CrucibleBumblebee.TapCompiler do
         Enum.any?(activation_names, &attention_activation_name?/1)
     )
     |> maybe_put(
+      :output_attention_scores,
+      Enum.any?(signal_types, &(&1 == :attention_scores)) or
+        Enum.any?(activation_names, &String.ends_with?(&1, ".attn.hook_attn_scores"))
+    )
+    |> maybe_put(
       :output_mlp_activations,
       Enum.any?(signal_types, &mlp_activation_type?/1) or
         Enum.any?(activation_names, &mlp_activation_name?/1)

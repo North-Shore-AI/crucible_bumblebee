@@ -50,6 +50,7 @@ defmodule CrucibleBumblebeeTest do
         [
           [id: "hidden", signal_type: :middle_residuals, layers: [0]],
           [id: "attention-pattern", signal_type: :attention_weights, layers: [0]],
+          [id: "attention-scores", signal_type: :attention_scores, layers: [0]],
           [id: "attention-q", signal_type: :attention_q, layers: [0], required?: false],
           [id: "mlp-gate", signal_type: :mlp_gates, layers: [0], required?: false],
           [id: "cache-state", signal_type: :kv_cache_state, required?: false],
@@ -62,8 +63,10 @@ defmodule CrucibleBumblebeeTest do
     assert compiled.global_layer_options[:output_hidden_states]
     assert compiled.global_layer_options[:output_attentions]
     assert compiled.global_layer_options[:output_attention_qkv]
+    assert compiled.global_layer_options[:output_attention_scores]
     assert compiled.global_layer_options[:output_mlp_activations]
     assert "decoder.layers.0.attention.weights" in compiled.hook_names
+    assert "decoder.layers.0.attention.scores" in compiled.hook_names
     assert "decoder.layers.0.attention.query" in compiled.hook_names
     assert "decoder.layers.0.mlp.gate" in compiled.hook_names
     assert "lm_head.output" in compiled.hook_names
@@ -93,6 +96,14 @@ defmodule CrucibleBumblebeeTest do
 
   test "activation-name taps derive precise fork output options" do
     surface = ExampleSurface.surface(num_blocks: 1)
+
+    assert {:ok, scores} =
+             "attn-scores"
+             |> CrucibleTap.activation_tap("blocks.0.attn.hook_attn_scores")
+             |> TapCompiler.compile(surface)
+
+    assert scores.global_layer_options[:output_attention_scores]
+    refute scores.global_layer_options[:output_attention_qkv]
 
     assert {:ok, attn_out} =
              "attn-out"
@@ -131,6 +142,7 @@ defmodule CrucibleBumblebeeTest do
     assert :attention_q in signal_types
     assert :attention_k in signal_types
     assert :attention_v in signal_types
+    assert :attention_scores in signal_types
     assert :mlp_gates in signal_types
     assert :mlp_activation in signal_types
     assert :residual_stream in signal_types
@@ -149,6 +161,9 @@ defmodule CrucibleBumblebeeTest do
 
     attention_q = Enum.find(records, &(&1.signal_type == :attention_q))
     assert attention_q.metadata.activation_name == "blocks.0.attn.hook_q"
+
+    attention_scores = Enum.find(records, &(&1.signal_type == :attention_scores))
+    assert attention_scores.metadata.activation_name == "blocks.0.attn.hook_attn_scores"
 
     mlp_pre = Enum.find(records, &(&1.signal_type == :mlp_gates))
     assert mlp_pre.metadata.activation_name == "blocks.0.mlp.hook_pre"
@@ -229,6 +244,7 @@ defmodule CrucibleBumblebeeTest do
       attention_queries: {Nx.tensor([[[[1.0, 0.0]]]], type: :f32)},
       attention_keys: {Nx.tensor([[[[0.8, 0.2]]]], type: :f32)},
       attention_values: {Nx.tensor([[[[0.3, 0.7]]]], type: :f32)},
+      attention_scores: {Nx.tensor([[[[0.0]]]], type: :f32)},
       attention_zs: {Nx.tensor([[[[0.4, 0.6]]]], type: :f32)},
       attention_outputs: {Nx.tensor([[[0.4, 0.6]]], type: :f32)},
       mlp_pre_activations: {Nx.tensor([[[0.1, 0.2, 0.3]]], type: :f32)},

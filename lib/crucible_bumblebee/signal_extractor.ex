@@ -81,6 +81,7 @@ defmodule CrucibleBumblebee.SignalExtractor do
     |> maybe_add_tuple_output(outputs, :attention_queries, :attention_q, trace_id, model_id)
     |> maybe_add_tuple_output(outputs, :attention_keys, :attention_k, trace_id, model_id)
     |> maybe_add_tuple_output(outputs, :attention_values, :attention_v, trace_id, model_id)
+    |> maybe_add_tuple_output(outputs, :attention_scores, :attention_scores, trace_id, model_id)
     |> maybe_add_tuple_output(outputs, :attention_zs, :head_outputs, trace_id, model_id)
     |> maybe_add_tuple_output(outputs, :attention_outputs, :head_outputs, trace_id, model_id)
     |> maybe_add_tuple_output(outputs, :mlp_pre_activations, :mlp_gates, trace_id, model_id)

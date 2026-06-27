@@ -90,6 +90,7 @@ defmodule CrucibleBumblebee.ExampleSurface do
       node("decoder.layers.#{layer}.attention.query", :attention_q, layer),
       node("decoder.layers.#{layer}.attention.key", :attention_k, layer),
       node("decoder.layers.#{layer}.attention.value", :attention_v, layer),
+      node("decoder.layers.#{layer}.attention.scores", :attention_scores, layer),
       node("decoder.layers.#{layer}.attention.weights", :attention_weights, layer),
       node("decoder.layers.#{layer}.attention.z", :head_outputs, layer),
       node(
@@ -177,6 +178,7 @@ defmodule CrucibleBumblebee.ExampleSurface do
               :attention_q,
               :attention_k,
               :attention_v,
+              :attention_scores,
               :attention_weights,
               :head_outputs,
               :residual_stream,

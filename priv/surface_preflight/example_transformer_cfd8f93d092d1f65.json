@@ -1,0 +1,68 @@
+{
+  "unsupported": [],
+  "version": 1,
+  "nodes": [
+    "tokens.embedding",
+    "decoder.layers.0.attention.query",
+    "decoder.layers.0.attention.key",
+    "decoder.layers.0.attention.value",
+    "decoder.layers.0.attention.scores",
+    "decoder.layers.0.attention.weights",
+    "decoder.layers.0.attention.z",
+    "decoder.layers.0.attention.output",
+    "decoder.layers.0.pre_attention_norm",
+    "decoder.layers.0.mlp.gate",
+    "decoder.layers.0.mlp.pre",
+    "decoder.layers.0.mlp.post",
+    "outputs.mlp_outputs.0",
+    "decoder.layers.0.mlp.output",
+    "decoder.layers.0.resid.pre",
+    "decoder.layers.0.resid.mid",
+    "decoder.layers.0.resid.post",
+    "decoder.layers.1.attention.query",
+    "decoder.layers.1.attention.key",
+    "decoder.layers.1.attention.value",
+    "decoder.layers.1.attention.scores",
+    "decoder.layers.1.attention.weights",
+    "decoder.layers.1.attention.z",
+    "decoder.layers.1.attention.output",
+    "decoder.layers.1.pre_attention_norm",
+    "decoder.layers.1.mlp.gate",
+    "decoder.layers.1.mlp.pre",
+    "decoder.layers.1.mlp.post",
+    "outputs.mlp_outputs.1",
+    "decoder.layers.1.mlp.output",
+    "decoder.layers.1.resid.pre",
+    "decoder.layers.1.resid.mid",
+    "decoder.layers.1.resid.post",
+    "decoder.final_norm",
+    "lm_head.output"
+  ],
+  "model_family": "example_transformer",
+  "logit_lens": {
+    "hidden_states": "outputs_hidden_states",
+    "final_norm": [
+      "params",
+      "decoder",
+      "final_norm"
+    ],
+    "unembedding": [
+      "params",
+      "lm_head",
+      "kernel"
+    ]
+  },
+  "surface_id": "example_transformer",
+  "post_processing_extractors": [
+    "final_logits",
+    "hidden_states",
+    "attentions",
+    "deep_attention_activations",
+    "deep_mlp_activations",
+    "residual_streams",
+    "cache"
+  ],
+  "dependency_fingerprint": "cfd8f93d092d1f65",
+  "surface_module": "CrucibleBumblebee.ExampleSurface",
+  "schema": "crucible_bumblebee.surface_preflight"
+}

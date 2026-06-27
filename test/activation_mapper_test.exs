@@ -21,6 +21,11 @@ defmodule CrucibleBumblebee.ActivationMapperTest do
              activation_name: "blocks.4.attn.hook_pattern",
              axes: [:batch, :head, :dest_pos, :src_pos]
            } = ActivationMapper.attention_weights(4)
+
+    assert %{
+             activation_name: "blocks.4.attn.hook_attn_scores",
+             axes: [:batch, :head, :dest_pos, :src_pos]
+           } = ActivationMapper.attention_scores(4)
   end
 
   test "maps surface-declared deep nodes to canonical activation names" do

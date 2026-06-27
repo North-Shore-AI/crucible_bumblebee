@@ -17,8 +17,8 @@ compilation.
 The bundled `ExampleSurface` and `Qwen3Surface` advertise exact reads for the
 deep outputs exposed by the pinned North-Shore-AI Bumblebee fork:
 
-- attention Q/K/V, attention pattern, per-head `hook_z`, and projected
-  `hook_attn_out`
+- attention Q/K/V, attention scores, attention pattern, per-head `hook_z`, and
+  projected `hook_attn_out`
 - MLP gate/pre, post, and output activations
 - layerwise residual stream pre, mid, and post outputs
 

@@ -97,6 +97,7 @@ defmodule CrucibleBumblebee.Qwen3Surface do
       node("decoder.blocks.#{layer}.self_attention.query", :attention_q, layer),
       node("decoder.blocks.#{layer}.self_attention.key", :attention_k, layer),
       node("decoder.blocks.#{layer}.self_attention.value", :attention_v, layer),
+      node("decoder.blocks.#{layer}.self_attention.scores", :attention_scores, layer),
       node("decoder.blocks.#{layer}.self_attention.weights", :attention_weights, layer),
       node("decoder.blocks.#{layer}.self_attention.z", :head_outputs, layer),
       node(
@@ -183,6 +184,7 @@ defmodule CrucibleBumblebee.Qwen3Surface do
               :attention_q,
               :attention_k,
               :attention_v,
+              :attention_scores,
               :attention_weights,
               :head_outputs,
               :residual_stream,

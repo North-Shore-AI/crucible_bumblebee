@@ -13,7 +13,7 @@ exposes a runnable surface.
 When compiled options cause Bumblebee to return hidden states or attentions,
 `CrucibleBumblebee.SignalExtractor` records canonical activation metadata on the
 resulting signals. With the pinned North-Shore-AI Bumblebee fork it also records
-real deep attention outputs, MLP activations, and residual streams when the
+real deep attention scores/outputs, MLP activations, and residual streams when the
 compiled plan enables those global layer options. It does not synthesize
 unavailable internals.
 
@@ -60,6 +60,7 @@ Canonical examples emitted by the native provider:
 %{activation_name: "blocks.0.hook_resid_pre", axes: [:batch, :pos, :d_model]}
 %{activation_name: "blocks.0.attn.hook_pattern", axes: [:batch, :head, :dest_pos, :src_pos]}
 %{activation_name: "blocks.0.attn.hook_q", axes: [:batch, :pos, :head, :d_head]}
+%{activation_name: "blocks.0.attn.hook_attn_scores", axes: [:batch, :head, :dest_pos, :src_pos]}
 %{activation_name: "blocks.0.mlp.hook_pre", axes: [:batch, :pos, :d_mlp]}
 %{activation_name: "blocks.0.hook_resid_mid", axes: [:batch, :pos, :d_model]}
 ```

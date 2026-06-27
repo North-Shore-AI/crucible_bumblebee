@@ -69,6 +69,14 @@ defmodule CrucibleBumblebee.ActivationMapper do
     )
   end
 
+  def attention_scores(layer) when is_integer(layer) and layer >= 0 do
+    metadata("blocks.#{layer}.attn.hook_attn_scores",
+      source_output: :attention_scores,
+      capture_exactness: :bumblebee_deep_output,
+      capture_mode: :summary
+    )
+  end
+
   def attention_z(layer) when is_integer(layer) and layer >= 0 do
     metadata("blocks.#{layer}.attn.hook_z",
       source_output: :attention_zs,
@@ -122,6 +130,7 @@ defmodule CrucibleBumblebee.ActivationMapper do
   def output_metadata(:attention_queries, layer), do: attention_query(layer)
   def output_metadata(:attention_keys, layer), do: attention_key(layer)
   def output_metadata(:attention_values, layer), do: attention_value(layer)
+  def output_metadata(:attention_scores, layer), do: attention_scores(layer)
   def output_metadata(:attention_zs, layer), do: attention_z(layer)
   def output_metadata(:attention_outputs, layer), do: attention_output(layer)
   def output_metadata(:mlp_pre_activations, layer), do: mlp_pre(layer)
@@ -154,6 +163,9 @@ defmodule CrucibleBumblebee.ActivationMapper do
 
       {:attention_v, layer} when is_integer(layer) ->
         attention_value(layer)
+
+      {:attention_scores, layer} when is_integer(layer) ->
+        attention_scores(layer)
 
       {:attention_weights, layer} when is_integer(layer) ->
         attention_weights(layer)

@@ -29,6 +29,9 @@ defmodule CrucibleBumblebee.InstrumentedForward do
           :attention_outputs
         ])
 
+      {:output_attention_scores, true}, :ok ->
+        require_output(outputs, :attention_scores)
+
       {:output_mlp_activations, true}, :ok ->
         require_outputs(outputs, [
           :mlp_pre_activations,

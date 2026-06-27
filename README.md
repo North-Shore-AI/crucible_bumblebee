@@ -74,8 +74,9 @@ metadata:
   `blocks.0.hook_resid_pre`
 - attention output collections: `blocks.N.attn.hook_pattern`
 - fork-backed deep outputs: `blocks.N.attn.hook_q`, `hook_k`, `hook_v`,
-  `hook_z`, `blocks.N.hook_attn_out`, `blocks.N.mlp.hook_pre`,
-  `hook_post`, `blocks.N.hook_mlp_out`, and layerwise residual streams
+  `hook_attn_scores`, `hook_z`, `blocks.N.hook_attn_out`,
+  `blocks.N.mlp.hook_pre`, `hook_post`, `blocks.N.hook_mlp_out`, and
+  layerwise residual streams
 
 `CrucibleBumblebee.LogitLensRunner` projects raw in-memory hidden states through
 surface-declared logit-lens parameter access. Summary-only traces do not
@@ -115,8 +116,9 @@ unavailable on the local Elixir stack for this run. The signal/generation gates
 captured input IDs, attention masks, final logits, top-k, entropy, margin,
 backend events, generated tokens, and manual autoregressive generation-step
 logits where the model was causal. Hidden states, attention collections, Q/K/V,
-attention outputs, MLP activations, and residual streams are captured only when
-the compiled run requests and receives the corresponding Bumblebee outputs.
+attention scores, attention outputs, MLP activations, and residual streams are
+captured only when the compiled run requests and receives the corresponding
+Bumblebee outputs.
 Global intermediate logits, KV-cache metadata, and active mutation remain
 structured surface blockers unless a provider advertises those exact
 capabilities.
