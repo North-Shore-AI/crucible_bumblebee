@@ -2,6 +2,7 @@ defmodule CrucibleBumblebee.GenerationTraceTest do
   use ExUnit.Case, async: true
 
   alias CrucibleBumblebee.{GenerationTrace, Live, ManualGeneration, ModelBundle}
+  alias CrucibleMechInterp.ActivationCache
 
   test "cache-backed generation trace matches Bumblebee greedy generation and full-forward tokens" do
     bundle = tiny_gpt2_bundle()
@@ -27,6 +28,37 @@ defmodule CrucibleBumblebee.GenerationTraceTest do
              :bumblebee_generation_trace,
              :bumblebee_generation_trace
            ]
+  end
+
+  test "generation logits can be exposed as an activation cache" do
+    bundle = tiny_gpt2_bundle()
+    inputs = %{"input_ids" => Nx.tensor([[1, 2, 3]], type: :u32)}
+
+    assert {:ok, trace} = GenerationTrace.run_inputs(bundle, inputs, max_new_tokens: 2, top_k: 3)
+    assert {:ok, cache} = GenerationTrace.to_activation_cache(trace)
+
+    assert Nx.shape(ActivationCache.get!(cache, "unembed.hook_logits")) == {1, 2, 32}
+    assert cache.metadata.source == :generation_trace
+    assert cache.metadata.generated_token_ids == trace.generated_token_ids
+    assert cache.specs["unembed.hook_logits"].signal_type == :generation_step_logits
+    assert cache.specs["unembed.hook_logits"].axes == [:batch, :pos, :d_vocab]
+  end
+
+  test "requested per-step internals degrade explicitly" do
+    bundle = tiny_gpt2_bundle()
+    inputs = %{"input_ids" => Nx.tensor([[1, 2, 3]], type: :u32)}
+
+    assert {:ok, trace} =
+             GenerationTrace.run_inputs(bundle, inputs,
+               max_new_tokens: 1,
+               optional_internals: [:hidden_states, :attention_weights]
+             )
+
+    assert {:unsupported,
+            %{
+              requested: [:hidden_states, :attention_weights],
+              reason: :not_exposed_by_bumblebee_generation_trace
+            }} = trace.optional_internals
   end
 
   test "non-greedy strategies fail closed" do

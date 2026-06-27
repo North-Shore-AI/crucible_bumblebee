@@ -20,6 +20,23 @@ Each step contains:
 Raw cache tensors are not written to JSONL. Trace events write bounded metadata
 and signal records write tensor summaries.
 
+## Activation Cache
+
+Use `GenerationTrace.to_activation_cache/2` when generation-step logits need to
+enter the TransformerLens-style cache API:
+
+```elixir
+{:ok, cache} = CrucibleBumblebee.GenerationTrace.to_activation_cache(trace)
+logits = CrucibleMechInterp.ActivationCache.get!(cache, "unembed.hook_logits")
+```
+
+The cache stores `unembed.hook_logits` with axes `[:batch, :pos, :d_vocab]`,
+where `:pos` is the generated-token index. This cache represents generated-step
+logits only; it does not claim residual, hidden-state, attention, or MLP
+captures. If those internals are requested from the generation trace path,
+`optional_internals` returns an explicit unsupported reason until Bumblebee
+exposes those tensors inside cached generation.
+
 ## Supported Path
 
 The current trace path supports single-item greedy causal-language-model

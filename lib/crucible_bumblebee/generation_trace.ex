@@ -9,6 +9,7 @@ defmodule CrucibleBumblebee.GenerationTrace do
   """
 
   alias CrucibleBumblebee.ModelBundle
+  alias CrucibleMechInterp.{ActivationCache, ActivationSpec}
 
   @success_level :kv_cache_generation_trace
 
@@ -30,6 +31,7 @@ defmodule CrucibleBumblebee.GenerationTrace do
          :ok <- validate_strategy(opts),
          :ok <- validate_single_batch_inputs(inputs) do
       prompt_length = prompt_length(inputs)
+      optional_internals = optional_internals(opts)
 
       if max_new_tokens == 0 do
         {:ok,
@@ -38,7 +40,7 @@ defmodule CrucibleBumblebee.GenerationTrace do
            generated_token_ids: [],
            decoded_text: "",
            generation_success_level: @success_level,
-           optional_internals: :not_requested,
+           optional_internals: optional_internals,
            trace_metadata: %{
              prompt_length: prompt_length,
              requested_max_new_tokens: 0,
@@ -67,7 +69,7 @@ defmodule CrucibleBumblebee.GenerationTrace do
            generated_token_ids: generated_token_ids,
            decoded_text: decode_tokens(bundle.tokenizer, generated_token_ids),
            generation_success_level: @success_level,
-           optional_internals: :not_requested,
+           optional_internals: optional_internals,
            trace_metadata: %{
              prompt_length: prompt_length,
              requested_max_new_tokens: max_new_tokens,
@@ -85,6 +87,37 @@ defmodule CrucibleBumblebee.GenerationTrace do
     step
     |> Map.drop([:logits])
     |> Map.update(:tensor_summary, nil, &Map.from_struct/1)
+  end
+
+  def to_activation_cache(%{steps: _steps} = trace, opts \\ []) when is_map(trace) do
+    {:ok, to_activation_cache!(trace, opts)}
+  rescue
+    error in [ArgumentError, KeyError] -> {:error, error}
+  end
+
+  def to_activation_cache!(%{steps: steps} = trace, opts \\ []) when is_list(steps) do
+    logits = generation_logits!(steps)
+
+    spec =
+      ActivationSpec.new!(%{
+        activation_name: "unembed.hook_logits",
+        signal_type: :generation_step_logits,
+        axes: [:batch, :pos, :d_vocab],
+        capture_mode: :raw,
+        requires_raw?: true,
+        metadata: %{source: :generation_trace}
+      })
+
+    ActivationCache.new!(
+      %{"unembed.hook_logits" => logits},
+      specs: %{"unembed.hook_logits" => spec},
+      model_info: Keyword.get(opts, :model_info, %{}),
+      metadata:
+        Map.merge(Map.get(trace, :trace_metadata, %{}), %{
+          source: :generation_trace,
+          generated_token_ids: Map.get(trace, :generated_token_ids, [])
+        })
+    )
   end
 
   defp build_steps(outputs, bundle, prompt_length, max_new_tokens, top_k) do
@@ -199,6 +232,20 @@ defmodule CrucibleBumblebee.GenerationTrace do
     |> Nx.to_number()
   end
 
+  defp generation_logits!([]) do
+    raise ArgumentError, "cannot build an activation cache from a generation trace with no steps"
+  end
+
+  defp generation_logits!(steps) do
+    stacked =
+      steps
+      |> Enum.sort_by(&Map.fetch!(&1, :step_index))
+      |> Enum.map(&Map.fetch!(&1, :logits))
+      |> Nx.stack()
+
+    Nx.reshape(stacked, {1, Nx.axis_size(stacked, 0), Nx.axis_size(stacked, 1)})
+  end
+
   defp decode_token(nil, _token_id), do: nil
 
   defp decode_token(tokenizer, token_id) do
@@ -221,6 +268,24 @@ defmodule CrucibleBumblebee.GenerationTrace do
   end
 
   defp margin(_top_k), do: nil
+
+  defp optional_internals(opts) do
+    requested =
+      opts
+      |> Keyword.get(:optional_internals, [])
+      |> List.wrap()
+      |> Enum.uniq()
+
+    if requested == [] do
+      :not_requested
+    else
+      {:unsupported,
+       %{
+         requested: requested,
+         reason: :not_exposed_by_bumblebee_generation_trace
+       }}
+    end
+  end
 
   defp prompt_length(inputs), do: inputs |> Map.fetch!("input_ids") |> Nx.axis_size(1)
 
