@@ -58,12 +58,14 @@ defmodule CrucibleBumblebee.ModelSurface do
   end
 
   def new!(family, nodes, metadata \\ %{}) do
+    adapter = Map.get(metadata, :adapter, :bumblebee)
+
     %__MODULE__{
       id: Map.get(metadata, :surface_id, family),
       family: family,
       surface:
         Surface.new!(
-          adapter: :bumblebee,
+          adapter: adapter,
           model_family: family,
           nodes: nodes,
           metadata: metadata
