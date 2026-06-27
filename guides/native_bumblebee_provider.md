@@ -13,9 +13,12 @@ exposes a runnable surface.
 When compiled options cause Bumblebee to return hidden states or attentions,
 `CrucibleBumblebee.SignalExtractor` records canonical activation metadata on the
 resulting signals. With the pinned North-Shore-AI Bumblebee fork it also records
-real deep attention scores/outputs, MLP activations, and residual streams when the
-compiled plan enables those global layer options. It does not synthesize
-unavailable internals.
+real deep attention scores/outputs, MLP activations, residual streams, and final
+normalization telemetry when the compiled plan enables those global layer
+options. It does not synthesize unavailable internals.
+
+Current fork pin:
+`North-Shore-AI/bumblebee@ba39a747ee5749ba0639190ee92ca3d976da8907`.
 
 ## Quickstart
 
@@ -63,6 +66,8 @@ Canonical examples emitted by the native provider:
 %{activation_name: "blocks.0.attn.hook_attn_scores", axes: [:batch, :head, :dest_pos, :src_pos]}
 %{activation_name: "blocks.0.mlp.hook_pre", axes: [:batch, :pos, :d_mlp]}
 %{activation_name: "blocks.0.hook_resid_mid", axes: [:batch, :pos, :d_model]}
+%{activation_name: "ln_final.hook_scale", axes: [:batch, :pos, :scale]}
+%{activation_name: "ln_final.hook_normalized", axes: [:batch, :pos, :d_model]}
 ```
 
 Required taps for `blocks.N.attn.hook_q`, `hook_k`, `hook_v`, and MLP hooks

@@ -46,6 +46,12 @@ defmodule CrucibleBumblebee.InstrumentedForward do
           :residual_streams_post
         ])
 
+      {:output_norm_telemetry, true}, :ok ->
+        require_outputs(outputs, [
+          :norm_scales,
+          :norm_normalized
+        ])
+
       {_option, _value}, :ok ->
         {:cont, :ok}
     end)

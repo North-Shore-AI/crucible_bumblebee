@@ -1,0 +1,58 @@
+{
+  "unsupported": [
+    "in_graph_steering"
+  ],
+  "version": 1,
+  "nodes": [
+    "embedder.token_embedding",
+    "decoder.blocks.0.self_attention.query",
+    "decoder.blocks.0.self_attention.key",
+    "decoder.blocks.0.self_attention.value",
+    "decoder.blocks.0.self_attention.scores",
+    "decoder.blocks.0.self_attention.weights",
+    "decoder.blocks.0.self_attention.z",
+    "decoder.blocks.0.self_attention.output",
+    "decoder.blocks.0.self_attention_norm",
+    "decoder.blocks.0.ffn.gate",
+    "decoder.blocks.0.ffn.pre",
+    "decoder.blocks.0.ffn.post",
+    "outputs.mlp_outputs.0",
+    "decoder.blocks.0.ffn.output",
+    "decoder.blocks.0.resid.pre",
+    "decoder.blocks.0.resid.mid",
+    "decoder.blocks.0.resid.post",
+    "decoder.blocks.0.output_norm",
+    "output_norm",
+    "outputs.norm_scales",
+    "outputs.norm_normalized",
+    "language_modeling_head.output"
+  ],
+  "schema": "crucible_bumblebee.surface_preflight",
+  "surface_id": "qwen3_example",
+  "surface_module": "CrucibleBumblebee.Qwen3Surface",
+  "dependency_fingerprint": "4a178958d6b5471f",
+  "model_family": "qwen3",
+  "post_processing_extractors": [
+    "final_logits",
+    "hidden_states",
+    "attentions",
+    "deep_attention_activations",
+    "deep_mlp_activations",
+    "residual_streams",
+    "norm_telemetry",
+    "cache"
+  ],
+  "logit_lens": {
+    "final_norm": [
+      "params",
+      "output_norm"
+    ],
+    "hidden_states": "outputs_hidden_states",
+    "unembedding": [
+      "params",
+      "language_modeling_head",
+      "output",
+      "kernel"
+    ]
+  }
+}

@@ -75,6 +75,11 @@ defmodule CrucibleBumblebee.TapCompiler do
       :output_residual_streams,
       residual_stream_output_requested?(plan, activation_names)
     )
+    |> maybe_put(
+      :output_norm_telemetry,
+      Enum.any?(signal_types, &(&1 == :norm_telemetry)) or
+        Enum.any?(activation_names, &norm_telemetry_activation_name?/1)
+    )
   end
 
   defp hidden_state_type?(type) do
@@ -129,6 +134,10 @@ defmodule CrucibleBumblebee.TapCompiler do
             activation_name -> residual_stream_activation_name?(activation_name)
           end
       end)
+  end
+
+  defp norm_telemetry_activation_name?(name) do
+    name in ["ln_final.hook_scale", "ln_final.hook_normalized"]
   end
 
   defp residual_stream_activation_name?(name), do: String.contains?(name, "hook_resid")

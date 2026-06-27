@@ -116,9 +116,9 @@ unavailable on the local Elixir stack for this run. The signal/generation gates
 captured input IDs, attention masks, final logits, top-k, entropy, margin,
 backend events, generated tokens, and manual autoregressive generation-step
 logits where the model was causal. Hidden states, attention collections, Q/K/V,
-attention scores, attention outputs, MLP activations, and residual streams are
-captured only when the compiled run requests and receives the corresponding
-Bumblebee outputs.
+attention scores, attention outputs, MLP activations, residual streams, and
+final norm telemetry are captured only when the compiled run requests and
+receives the corresponding Bumblebee outputs.
 Global intermediate logits, KV-cache metadata, and active mutation remain
 structured surface blockers unless a provider advertises those exact
 capabilities.

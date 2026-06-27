@@ -17,6 +17,7 @@ defmodule CrucibleBumblebee.SignalExtractor do
       |> maybe_add_hidden_states(outputs, trace_id, model_id)
       |> maybe_add_attentions(outputs, trace_id, model_id)
       |> maybe_add_deep_outputs(outputs, trace_id, model_id)
+      |> maybe_add_norm_telemetry(outputs, trace_id, model_id)
 
     {Enum.reverse(records), trajectory(records)}
   end
@@ -110,6 +111,12 @@ defmodule CrucibleBumblebee.SignalExtractor do
     )
   end
 
+  defp maybe_add_norm_telemetry(records, outputs, trace_id, model_id) do
+    records
+    |> maybe_add_single_output(outputs, :norm_scales, :norm_telemetry, trace_id, model_id)
+    |> maybe_add_single_output(outputs, :norm_normalized, :norm_telemetry, trace_id, model_id)
+  end
+
   defp maybe_add_tuple_output(records, outputs, output_key, signal_type, trace_id, model_id) do
     case Map.fetch(outputs, output_key) do
       {:ok, %Axon.None{}} ->
@@ -136,6 +143,33 @@ defmodule CrucibleBumblebee.SignalExtractor do
             | acc
           ]
         end)
+
+      :error ->
+        records
+    end
+  end
+
+  defp maybe_add_single_output(records, outputs, output_key, signal_type, trace_id, model_id) do
+    case Map.fetch(outputs, output_key) do
+      {:ok, %Axon.None{}} ->
+        records
+
+      {:ok, value} ->
+        metadata = ActivationMapper.output_metadata(output_key, :final)
+
+        [
+          record(
+            trace_id,
+            Atom.to_string(output_key),
+            signal_type,
+            model_id,
+            value,
+            layer_index: :final,
+            node_name: Atom.to_string(output_key),
+            metadata: metadata
+          )
+          | records
+        ]
 
       :error ->
         records

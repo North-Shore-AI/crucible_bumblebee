@@ -23,6 +23,7 @@ defmodule CrucibleBumblebee.ExampleSurface do
       deep_attention_activations: true,
       deep_mlp_activations: true,
       residual_streams: true,
+      norm_telemetry: true,
       named_hooks: true,
       final_logits: true,
       cache_metadata: true,
@@ -52,6 +53,7 @@ defmodule CrucibleBumblebee.ExampleSurface do
          :deep_attention_activations,
          :deep_mlp_activations,
          :residual_streams,
+         :norm_telemetry,
          :cache
        ],
        logit_lens: %{
@@ -81,6 +83,18 @@ defmodule CrucibleBumblebee.ExampleSurface do
     ] ++
       [
         node("decoder.final_norm", :late_residuals, :final),
+        node(
+          "outputs.norm_scales",
+          :norm_telemetry,
+          :final,
+          CrucibleBumblebee.ActivationMapper.final_norm_scale()
+        ),
+        node(
+          "outputs.norm_normalized",
+          :norm_telemetry,
+          :final,
+          CrucibleBumblebee.ActivationMapper.final_norm_normalized()
+        ),
         node("lm_head.output", :final_logits, :final)
       ]
   end
@@ -164,13 +178,15 @@ defmodule CrucibleBumblebee.ExampleSurface do
       axes: Map.get(metadata, :axes),
       layer_name: layer_name,
       layer_index: layer_index,
-      operations: operations(signal_type),
+      operations: operations(signal_type, layer_index),
       capture_modes: [:summary, :sample, :compressed_vector],
       metadata: metadata
     ]
   end
 
-  defp operations(signal_type)
+  defp operations(:norm_telemetry, :final), do: [:read, :probe]
+
+  defp operations(signal_type, _layer_index)
        when signal_type in [
               :embeddings,
               :middle_residuals,
@@ -188,7 +204,7 @@ defmodule CrucibleBumblebee.ExampleSurface do
             ],
        do: [:read, :probe]
 
-  defp operations(_signal_type), do: [:probe]
+  defp operations(_signal_type, _layer_index), do: [:probe]
 
   defp fetch_path(value, []), do: {:ok, value}
 

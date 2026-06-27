@@ -127,6 +127,22 @@ defmodule CrucibleBumblebee.ActivationMapper do
     )
   end
 
+  def final_norm_scale do
+    metadata("ln_final.hook_scale",
+      source_output: :norm_scales,
+      capture_exactness: :bumblebee_deep_output,
+      capture_mode: :summary
+    )
+  end
+
+  def final_norm_normalized do
+    metadata("ln_final.hook_normalized",
+      source_output: :norm_normalized,
+      capture_exactness: :bumblebee_deep_output,
+      capture_mode: :summary
+    )
+  end
+
   def output_metadata(:attention_queries, layer), do: attention_query(layer)
   def output_metadata(:attention_keys, layer), do: attention_key(layer)
   def output_metadata(:attention_values, layer), do: attention_value(layer)
@@ -145,6 +161,9 @@ defmodule CrucibleBumblebee.ActivationMapper do
 
   def output_metadata(:residual_streams_post, layer),
     do: residual_stream(layer, :hook_resid_post, :residual_streams_post)
+
+  def output_metadata(:norm_scales, :final), do: final_norm_scale()
+  def output_metadata(:norm_normalized, :final), do: final_norm_normalized()
 
   @doc "Builds canonical metadata for surface-declared nodes when known."
   def surface_metadata(signal_type, layer_index) do
@@ -184,6 +203,9 @@ defmodule CrucibleBumblebee.ActivationMapper do
 
       {:late_residuals, :final} ->
         metadata("ln_final.hook_normalized")
+
+      {:norm_telemetry, :final} ->
+        final_norm_normalized()
 
       _other ->
         %{}

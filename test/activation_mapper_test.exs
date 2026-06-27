@@ -26,6 +26,16 @@ defmodule CrucibleBumblebee.ActivationMapperTest do
              activation_name: "blocks.4.attn.hook_attn_scores",
              axes: [:batch, :head, :dest_pos, :src_pos]
            } = ActivationMapper.attention_scores(4)
+
+    assert %{
+             activation_name: "ln_final.hook_scale",
+             axes: [:batch, :pos, :scale]
+           } = ActivationMapper.final_norm_scale()
+
+    assert %{
+             activation_name: "ln_final.hook_normalized",
+             axes: [:batch, :pos, :d_model]
+           } = ActivationMapper.final_norm_normalized()
   end
 
   test "maps surface-declared deep nodes to canonical activation names" do
@@ -34,5 +44,8 @@ defmodule CrucibleBumblebee.ActivationMapperTest do
 
     assert ActivationMapper.surface_metadata(:mlp_gates, 2).activation_name ==
              "blocks.2.mlp.hook_pre"
+
+    assert ActivationMapper.surface_metadata(:norm_telemetry, :final).activation_name ==
+             "ln_final.hook_normalized"
   end
 end

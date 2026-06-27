@@ -53,6 +53,7 @@ defmodule CrucibleBumblebeeTest do
           [id: "attention-scores", signal_type: :attention_scores, layers: [0]],
           [id: "attention-q", signal_type: :attention_q, layers: [0], required?: false],
           [id: "mlp-gate", signal_type: :mlp_gates, layers: [0], required?: false],
+          [id: "final-norm", signal_type: :norm_telemetry, layers: [:final]],
           [id: "cache-state", signal_type: :kv_cache_state, required?: false],
           [id: "logits", signal_type: :final_logits, layers: [:final]]
         ],
@@ -65,10 +66,13 @@ defmodule CrucibleBumblebeeTest do
     assert compiled.global_layer_options[:output_attention_qkv]
     assert compiled.global_layer_options[:output_attention_scores]
     assert compiled.global_layer_options[:output_mlp_activations]
+    assert compiled.global_layer_options[:output_norm_telemetry]
     assert "decoder.layers.0.attention.weights" in compiled.hook_names
     assert "decoder.layers.0.attention.scores" in compiled.hook_names
     assert "decoder.layers.0.attention.query" in compiled.hook_names
     assert "decoder.layers.0.mlp.gate" in compiled.hook_names
+    assert "outputs.norm_scales" in compiled.hook_names
+    assert "outputs.norm_normalized" in compiled.hook_names
     assert "lm_head.output" in compiled.hook_names
     unsupported = Map.new(compiled.unsupported_optional, &{&1.tap_id, &1.reason})
     assert unsupported["cache-state"] == :no_surface_node
@@ -127,6 +131,15 @@ defmodule CrucibleBumblebeeTest do
              |> TapCompiler.compile(surface)
 
     assert resid_mid.global_layer_options[:output_residual_streams]
+
+    assert {:ok, norm_scale} =
+             "norm-scale"
+             |> CrucibleTap.activation_tap("ln_final.hook_scale")
+             |> TapCompiler.compile(surface)
+
+    assert norm_scale.global_layer_options[:output_norm_telemetry]
+    refute norm_scale.global_layer_options[:output_residual_streams]
+    assert norm_scale.hook_names == ["outputs.norm_scales"]
   end
 
   test "signal extractor builds records and layer trajectory from fixture outputs" do
@@ -146,6 +159,7 @@ defmodule CrucibleBumblebeeTest do
     assert :mlp_gates in signal_types
     assert :mlp_activation in signal_types
     assert :residual_stream in signal_types
+    assert :norm_telemetry in signal_types
     assert trajectory.points != []
 
     final_logits = Enum.find(records, &(&1.signal_type == :final_logits))
@@ -172,6 +186,14 @@ defmodule CrucibleBumblebeeTest do
       Enum.find(records, &(&1.metadata.activation_name == "blocks.0.hook_resid_mid"))
 
     assert resid_mid.signal_type == :residual_stream
+
+    norm_scale = Enum.find(records, &(&1.signal_id == "norm_scales"))
+    assert norm_scale.metadata.activation_name == "ln_final.hook_scale"
+    assert norm_scale.layer_index == :final
+
+    norm_normalized = Enum.find(records, &(&1.signal_id == "norm_normalized"))
+    assert norm_normalized.metadata.activation_name == "ln_final.hook_normalized"
+    assert norm_normalized.layer_index == :final
   end
 
   test "forward runner returns a forward trace from a tiny fixture predict function" do
@@ -253,6 +275,8 @@ defmodule CrucibleBumblebeeTest do
       residual_streams_pre: {Nx.tensor([[[1.0, 0.0]]], type: :f32)},
       residual_streams_mid: {Nx.tensor([[[0.5, 0.5]]], type: :f32)},
       residual_streams_post: {Nx.tensor([[[0.0, 1.0]]], type: :f32)},
+      norm_scales: Nx.tensor([[[1.0]]], type: :f32),
+      norm_normalized: Nx.tensor([[[0.0, 1.0]]], type: :f32),
       cache: %{blocks: {:block0}}
     }
   end

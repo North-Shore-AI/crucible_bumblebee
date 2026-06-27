@@ -21,6 +21,10 @@ deep outputs exposed by the pinned North-Shore-AI Bumblebee fork:
   projected `hook_attn_out`
 - MLP gate/pre, post, and output activations
 - layerwise residual stream pre, mid, and post outputs
+- final `ln_final.hook_scale` and `ln_final.hook_normalized` telemetry
 
 Surface modules for other model families should only copy those `:read`
 capabilities after their forward path returns the corresponding tensors.
+
+The current fork pin is
+`North-Shore-AI/bumblebee@ba39a747ee5749ba0639190ee92ca3d976da8907`.
