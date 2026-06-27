@@ -3,7 +3,7 @@ defmodule CrucibleBumblebee.Live do
   Standalone native Bumblebee live gates.
   """
 
-  alias CrucibleBumblebee.{ManualGeneration, ModelLoader, Preflight, TraceWriter}
+  alias CrucibleBumblebee.{GenerationTrace, ModelLoader, Preflight, TraceWriter}
   alias CrucibleBumblebee.ModelLoader.Options
   alias CrucibleTap.TapPlan
 
@@ -163,7 +163,8 @@ defmodule CrucibleBumblebee.Live do
           :generation_token,
           :generation_step_logits,
           :decode_entropy,
-          :decode_margin
+          :decode_margin,
+          :kv_cache_metadata
         ],
         unsupported: [
           %Crucible.UnsupportedCapability{
@@ -175,14 +176,9 @@ defmodule CrucibleBumblebee.Live do
             capability: :attention_weights,
             reason: :unsupported_by_surface,
             required?: false
-          },
-          %Crucible.UnsupportedCapability{
-            capability: :kv_cache_metadata,
-            reason: :blocked_by_generation_pipeline,
-            required?: false
           }
         ],
-        optional_dropped: [:hidden_state, :attention_weights, :kv_cache_metadata]
+        optional_dropped: [:hidden_state, :attention_weights]
       )
 
     TraceWriter.write_capability_report!(report_path, report)
@@ -216,14 +212,14 @@ defmodule CrucibleBumblebee.Live do
 
     high_level_text = if attempt_high_level?, do: maybe_generate_text(bundle, prompt)
 
-    case ManualGeneration.run(bundle, prompt,
+    case GenerationTrace.run(bundle, prompt,
            max_new_tokens: max_new_tokens,
            strategy: generation_strategy,
            seed: options.seed,
            stop_token_ids: stop_token_ids
          ) do
-      {:ok, manual} ->
-        Enum.each(manual.steps, fn step ->
+      {:ok, generation_trace} ->
+        Enum.each(generation_trace.steps, fn step ->
           signal =
             TraceWriter.signal_from_tensor(step.logits, %{
               signal_id: "sig_generation_step_logits_#{step.step_index}",
@@ -236,11 +232,24 @@ defmodule CrucibleBumblebee.Live do
               backend: bundle.backend,
               token_index: step.step_index,
               node_name: "generation_step_logits",
-              capture_method: :manual_autoregressive_loop,
-              capability_status: :captured
+              capture_method: :bumblebee_generation_trace,
+              capability_status: :captured,
+              metadata: %{cache_metadata: step.cache_metadata}
             })
 
           TraceWriter.write!(trace_path, :signal_record, trace_id: trace_id, signal: signal)
+
+          TraceWriter.write!(trace_path, :token_step,
+            trace_id: trace_id,
+            token_index: step.step_index,
+            logits_ref: signal.signal_id,
+            generated_token_id: step.token_id,
+            generated_token_text: step.token_text,
+            entropy: step.entropy,
+            margin: step.margin,
+            top_k: step.top_k,
+            metadata: %{cache_metadata: step.cache_metadata}
+          )
 
           TraceWriter.write!(trace_path, :generation_step,
             trace_id: trace_id,
@@ -250,7 +259,9 @@ defmodule CrucibleBumblebee.Live do
             logits_signal_id: signal.signal_id,
             entropy: step.entropy,
             margin: step.margin,
-            top_k: step.top_k
+            top_k: step.top_k,
+            cache_offset: step.cache_offset,
+            cache_metadata: step.cache_metadata
           )
         end)
 
@@ -258,8 +269,9 @@ defmodule CrucibleBumblebee.Live do
           trace_id: trace_id,
           status: :ok,
           high_level_generation_text_available?: not is_nil(high_level_text),
-          generated_token_ids: manual.generated_token_ids,
-          generated_text: manual.decoded_text
+          generated_token_ids: generation_trace.generated_token_ids,
+          generated_text: generation_trace.decoded_text,
+          trace_metadata: generation_trace.trace_metadata
         )
 
         TraceWriter.write!(trace_path, :trace_end, trace_id: trace_id, status: :ok)
@@ -267,10 +279,10 @@ defmodule CrucibleBumblebee.Live do
         %{
           ok: true,
           generation_supported?: true,
-          generation_success_level: :generation_step_logits,
-          generated_token_ids: manual.generated_token_ids,
-          generated_text: manual.decoded_text,
-          step_count: length(manual.steps),
+          generation_success_level: generation_trace.generation_success_level,
+          generated_token_ids: generation_trace.generated_token_ids,
+          generated_text: generation_trace.decoded_text,
+          step_count: length(generation_trace.steps),
           capability_report_path: report_path,
           trace_path: trace_path
         }

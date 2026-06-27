@@ -211,7 +211,7 @@ defmodule CrucibleBumblebee.LiveMatrix do
           generation: Map.get(result, :generation_supported?, false),
           success_level: success_level,
           generated_tokens: Map.get(result, :generated_token_ids, []),
-          step_logits: success_level == :generation_step_logits,
+          step_logits: success_level in [:generation_step_logits, :kv_cache_generation_trace],
           step_count: Map.get(result, :step_count, 0),
           trace: result.trace_path,
           duration_ms: elapsed_ms(started),

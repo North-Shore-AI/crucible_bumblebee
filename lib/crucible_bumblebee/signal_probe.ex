@@ -5,8 +5,8 @@ defmodule CrucibleBumblebee.SignalProbe do
 
   alias CrucibleBumblebee.{
     Artifacts,
+    GenerationTrace,
     Live,
-    ManualGeneration,
     ModelLoader,
     ModelLoader.Options,
     TraceWriter
@@ -110,12 +110,6 @@ defmodule CrucibleBumblebee.SignalProbe do
         :unsupported_by_model_family,
         context
       )
-      |> classify_blocked(
-        :kv_cache_metadata,
-        @blocked_by_bumblebee,
-        @blocked_by_bumblebee,
-        context
-      )
       |> capture_backend_event(started, context)
       |> Enum.reverse()
 
@@ -202,18 +196,22 @@ defmodule CrucibleBumblebee.SignalProbe do
 
   defp classify_generation(rows, %{model: %{family: family}} = context)
        when family in [:gpt2, :qwen3] do
-    case ManualGeneration.run(context.bundle, context.prompt, max_new_tokens: 1) do
+    case GenerationTrace.run(context.bundle, context.prompt, max_new_tokens: 1) do
       {:ok, %{steps: [step | _rest]}} ->
         write_signal!(context, step.logits, :generation_step_logits,
           signal_id: "sig_generation_step_logits_probe_#{step.step_index}",
           node_name: "generation_step_logits",
           token_index: step.step_index,
-          capture_method: :manual_autoregressive_loop,
+          capture_method: :bumblebee_generation_trace,
+          metadata: %{cache_metadata: step.cache_metadata},
           entropy?: true,
           top_k: 10
         )
 
         [
+          row(context.model, context.backend, :kv_cache_metadata, :captured, nil,
+            trace_path: context.trace_path
+          ),
           row(context.model, context.backend, :generation_step_logits, :captured, nil,
             trace_path: context.trace_path
           ),
@@ -225,6 +223,14 @@ defmodule CrucibleBumblebee.SignalProbe do
 
       {:error, reason} ->
         [
+          row(
+            context.model,
+            context.backend,
+            :kv_cache_metadata,
+            :failed_with_exception,
+            inspect(reason),
+            trace_path: context.trace_path
+          ),
           row(
             context.model,
             context.backend,
@@ -240,6 +246,14 @@ defmodule CrucibleBumblebee.SignalProbe do
 
   defp classify_generation(rows, context) do
     [
+      row(
+        context.model,
+        context.backend,
+        :kv_cache_metadata,
+        :unsupported_by_model_family,
+        :non_causal_generation,
+        trace_path: context.trace_path
+      ),
       row(
         context.model,
         context.backend,
@@ -346,7 +360,13 @@ defmodule CrucibleBumblebee.SignalProbe do
       trace_event_present: status == :captured,
       policy_uses_it:
         status == :captured and
-          signal in [:final_logits, :generation_step_logits, :top_k_summary, :entropy_margin],
+          signal in [
+            :final_logits,
+            :generation_step_logits,
+            :kv_cache_metadata,
+            :top_k_summary,
+            :entropy_margin
+          ],
       trace: Keyword.get(attrs, :trace_path)
     }
   end

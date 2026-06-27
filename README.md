@@ -92,6 +92,7 @@ or an eager tensor resolver.
 - [Forward Runner](guides/forward_runner.md)
 - [Interventions](guides/interventions.md)
 - [Generation Runner](guides/generation_runner.md)
+- [Generation Trace](guides/generation_trace.md)
 - [Backend](guides/backend.md)
 - [Native Bumblebee Provider](guides/native_bumblebee_provider.md)
 - [Generation Capability Degradation](guides/generation_capability_degradation.md)
@@ -115,14 +116,14 @@ structured blockers.
 The Binary backend ran locally. EXLA CPU/CUDA and Torchx were recorded as
 unavailable on the local Elixir stack for this run. The signal/generation gates
 captured input IDs, attention masks, final logits, top-k, entropy, margin,
-backend events, generated tokens, and manual autoregressive generation-step
-logits where the model was causal. Hidden states, attention collections, Q/K/V,
+backend events, generated tokens, generation-step logits, and KV-cache offset
+metadata from Bumblebee's cached generation path where the model was causal.
+Hidden states, attention collections, Q/K/V,
 attention scores, attention outputs, MLP activations, residual streams, and
 final norm telemetry are captured only when the compiled run requests and
 receives the corresponding Bumblebee outputs.
-Global intermediate logits, KV-cache metadata, and active mutation remain
-structured surface blockers unless a provider advertises those exact
-capabilities.
+Global intermediate logits and active mutation remain structured surface
+blockers unless a provider advertises those exact capabilities.
 
 Artifacts are written under `tmp/crucible_v5/`, including:
 
