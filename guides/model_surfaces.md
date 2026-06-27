@@ -13,3 +13,14 @@ Surface nodes may include canonical activation metadata. A node should advertise
 current implementation. Deep internals that are known by name but not yet
 capturable should remain `[:probe]` so required read taps fail closed during tap
 compilation.
+
+The bundled `ExampleSurface` and `Qwen3Surface` advertise exact reads for the
+deep outputs exposed by the pinned North-Shore-AI Bumblebee fork:
+
+- attention Q/K/V, attention pattern, per-head `hook_z`, and projected
+  `hook_attn_out`
+- MLP gate/pre, post, and output activations
+- layerwise residual stream pre, mid, and post outputs
+
+Surface modules for other model families should only copy those `:read`
+capabilities after their forward path returns the corresponding tensors.

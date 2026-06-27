@@ -3,7 +3,7 @@ defmodule CrucibleBumblebee.MixProject do
 
   @version "0.1.0"
   @source_url "https://github.com/North-Shore-AI/crucible_bumblebee"
-  @bumblebee_ref "d0774e8ab8c4d5ac60ade95ec8dc9e1f0efd7306"
+  @bumblebee_ref "e3d73c02729e0c1a4994506ae0dab114252d3910"
 
   def project do
     [
@@ -46,7 +46,7 @@ defmodule CrucibleBumblebee.MixProject do
       {:crucible_policy, path: "../crucible_policy"},
       {:nx, "~> 0.12", override: true},
       {:axon, "~> 0.7"},
-      {:bumblebee, github: "elixir-nx/bumblebee", ref: @bumblebee_ref, override: true},
+      {:bumblebee, github: "North-Shore-AI/bumblebee", ref: @bumblebee_ref, override: true},
       {:jason, "~> 1.4"},
       {:ex_doc, "~> 0.40.1", only: [:dev, :test], runtime: false}
     ]

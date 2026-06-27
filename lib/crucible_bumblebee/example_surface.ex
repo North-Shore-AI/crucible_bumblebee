@@ -20,6 +20,9 @@ defmodule CrucibleBumblebee.ExampleSurface do
     %{
       hidden_states: true,
       attentions: true,
+      deep_attention_activations: true,
+      deep_mlp_activations: true,
+      residual_streams: true,
       named_hooks: true,
       final_logits: true,
       cache_metadata: true,
@@ -42,7 +45,15 @@ defmodule CrucibleBumblebee.ExampleSurface do
        surface_id: id(),
        model_family: model_family(),
        nodes: Enum.map(nodes(num_blocks), & &1[:id]),
-       post_processing_extractors: [:final_logits, :hidden_states, :attentions, :cache],
+       post_processing_extractors: [
+         :final_logits,
+         :hidden_states,
+         :attentions,
+         :deep_attention_activations,
+         :deep_mlp_activations,
+         :residual_streams,
+         :cache
+       ],
        logit_lens: %{
          final_norm: [:params, :decoder, :final_norm],
          unembedding: [:params, :lm_head, :kernel],
@@ -80,15 +91,70 @@ defmodule CrucibleBumblebee.ExampleSurface do
       node("decoder.layers.#{layer}.attention.key", :attention_k, layer),
       node("decoder.layers.#{layer}.attention.value", :attention_v, layer),
       node("decoder.layers.#{layer}.attention.weights", :attention_weights, layer),
-      node("decoder.layers.#{layer}.attention.output", :head_outputs, layer),
+      node("decoder.layers.#{layer}.attention.z", :head_outputs, layer),
+      node(
+        "decoder.layers.#{layer}.attention.output",
+        :residual_stream,
+        layer,
+        CrucibleBumblebee.ActivationMapper.attention_output(layer)
+      ),
       node("decoder.layers.#{layer}.pre_attention_norm", :norm_telemetry, layer),
       node("decoder.layers.#{layer}.mlp.gate", :mlp_gates, layer),
-      node("decoder.layers.#{layer}.mlp.output", :middle_residuals, layer)
+      node(
+        "decoder.layers.#{layer}.mlp.pre",
+        :mlp_activation,
+        layer,
+        CrucibleBumblebee.ActivationMapper.mlp_pre(layer)
+      ),
+      node(
+        "decoder.layers.#{layer}.mlp.post",
+        :mlp_activation,
+        layer,
+        CrucibleBumblebee.ActivationMapper.mlp_post(layer)
+      ),
+      node(
+        "outputs.mlp_outputs.#{layer}",
+        :residual_stream,
+        layer,
+        CrucibleBumblebee.ActivationMapper.mlp_output(layer)
+      ),
+      node("decoder.layers.#{layer}.mlp.output", :middle_residuals, layer, %{}),
+      node(
+        "decoder.layers.#{layer}.resid.pre",
+        :residual_stream,
+        layer,
+        CrucibleBumblebee.ActivationMapper.residual_stream(
+          layer,
+          :hook_resid_pre,
+          :residual_streams_pre
+        )
+      ),
+      node(
+        "decoder.layers.#{layer}.resid.mid",
+        :residual_stream,
+        layer,
+        CrucibleBumblebee.ActivationMapper.residual_stream(
+          layer,
+          :hook_resid_mid,
+          :residual_streams_mid
+        )
+      ),
+      node(
+        "decoder.layers.#{layer}.resid.post",
+        :residual_stream,
+        layer,
+        CrucibleBumblebee.ActivationMapper.residual_stream(
+          layer,
+          :hook_resid_post,
+          :residual_streams_post
+        )
+      )
     ]
   end
 
-  defp node(layer_name, signal_type, layer_index) do
-    metadata = CrucibleBumblebee.ActivationMapper.surface_metadata(signal_type, layer_index)
+  defp node(layer_name, signal_type, layer_index, metadata \\ nil) do
+    metadata =
+      metadata || CrucibleBumblebee.ActivationMapper.surface_metadata(signal_type, layer_index)
 
     [
       id: layer_name,
@@ -108,7 +174,14 @@ defmodule CrucibleBumblebee.ExampleSurface do
               :embeddings,
               :middle_residuals,
               :late_residuals,
+              :attention_q,
+              :attention_k,
+              :attention_v,
               :attention_weights,
+              :head_outputs,
+              :residual_stream,
+              :mlp_gates,
+              :mlp_activation,
               :final_logits
             ],
        do: [:read, :probe]

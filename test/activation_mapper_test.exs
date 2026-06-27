@@ -23,10 +23,11 @@ defmodule CrucibleBumblebee.ActivationMapperTest do
            } = ActivationMapper.attention_weights(4)
   end
 
-  test "maps surface-declared nodes without creating unsupported deep claims" do
+  test "maps surface-declared deep nodes to canonical activation names" do
     assert ActivationMapper.surface_metadata(:attention_q, 2).activation_name ==
              "blocks.2.attn.hook_q"
 
-    assert ActivationMapper.surface_metadata(:mlp_gates, 2) == %{}
+    assert ActivationMapper.surface_metadata(:mlp_gates, 2).activation_name ==
+             "blocks.2.mlp.hook_pre"
   end
 end

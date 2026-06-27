@@ -20,6 +20,29 @@ defmodule CrucibleBumblebee.InstrumentedForward do
       {:output_attentions, true}, :ok ->
         require_output(outputs, :attentions)
 
+      {:output_attention_qkv, true}, :ok ->
+        require_outputs(outputs, [
+          :attention_queries,
+          :attention_keys,
+          :attention_values,
+          :attention_zs,
+          :attention_outputs
+        ])
+
+      {:output_mlp_activations, true}, :ok ->
+        require_outputs(outputs, [
+          :mlp_pre_activations,
+          :mlp_post_activations,
+          :mlp_outputs
+        ])
+
+      {:output_residual_streams, true}, :ok ->
+        require_outputs(outputs, [
+          :residual_streams_pre,
+          :residual_streams_mid,
+          :residual_streams_post
+        ])
+
       {_option, _value}, :ok ->
         {:cont, :ok}
     end)
@@ -33,6 +56,13 @@ defmodule CrucibleBumblebee.InstrumentedForward do
       {:cont, :ok}
     else
       {:halt, {:error, {:missing_compiled_output, key}}}
+    end
+  end
+
+  defp require_outputs(outputs, keys) do
+    case Enum.reduce_while(keys, :ok, fn key, :ok -> require_output(outputs, key) end) do
+      :ok -> {:cont, :ok}
+      error -> {:halt, error}
     end
   end
 end

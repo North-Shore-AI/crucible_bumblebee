@@ -74,7 +74,8 @@ defmodule CrucibleBumblebee.SurfacePreflight do
       axon: app_vsn(:axon),
       surface_module: inspect(surface.module),
       surface_id: surface.id,
-      surface_options: Map.get(surface.metadata, :surface_options, %{})
+      surface_options: Map.get(surface.metadata, :surface_options, %{}),
+      surface_nodes: surface_node_fingerprint(surface)
     }
     |> :erlang.term_to_binary()
     |> then(&:crypto.hash(:sha256, &1))
@@ -87,6 +88,19 @@ defmodule CrucibleBumblebee.SurfacePreflight do
       nil -> "unknown"
       vsn -> List.to_string(vsn)
     end
+  end
+
+  defp surface_node_fingerprint(%ModelSurface{} = surface) do
+    Enum.map(surface.surface.nodes, fn node ->
+      %{
+        id: node.id,
+        signal_type: node.signal_type,
+        activation_name: node.activation_name,
+        layer_index: node.layer_index,
+        operations: node.operations,
+        capture_modes: node.capture_modes
+      }
+    end)
   end
 
   defp preflight_opts(%ModelSurface{} = surface, opts) do

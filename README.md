@@ -73,11 +73,9 @@ metadata:
 - hidden-state tuple entries: residual-stream names such as
   `blocks.0.hook_resid_pre`
 - attention output collections: `blocks.N.attn.hook_pattern`
-
-Surface-declared deep hooks such as Q/K/V are probe-only until Bumblebee/Axon
-instrumentation can emit the actual tensors. Required Q/K/V read taps therefore
-fail closed with explicit capability reasons instead of compiling into a trace
-that cannot contain those activations.
+- fork-backed deep outputs: `blocks.N.attn.hook_q`, `hook_k`, `hook_v`,
+  `hook_z`, `blocks.N.hook_attn_out`, `blocks.N.mlp.hook_pre`,
+  `hook_post`, `blocks.N.hook_mlp_out`, and layerwise residual streams
 
 `CrucibleBumblebee.LogitLensRunner` projects raw in-memory hidden states through
 surface-declared logit-lens parameter access. Summary-only traces do not
@@ -116,11 +114,12 @@ The Binary backend ran locally. EXLA CPU/CUDA and Torchx were recorded as
 unavailable on the local Elixir stack for this run. The signal/generation gates
 captured input IDs, attention masks, final logits, top-k, entropy, margin,
 backend events, generated tokens, and manual autoregressive generation-step
-logits where the model was causal. Hidden states and attention collections are
-captured only when Bumblebee returns them for the compiled run. Deep Q/K/V,
-MLP internals, global intermediate logits, KV-cache metadata, and active
-mutation remain structured Bumblebee/Axon surface blockers unless a provider
-advertises those exact capabilities.
+logits where the model was causal. Hidden states, attention collections, Q/K/V,
+attention outputs, MLP activations, and residual streams are captured only when
+the compiled run requests and receives the corresponding Bumblebee outputs.
+Global intermediate logits, KV-cache metadata, and active mutation remain
+structured surface blockers unless a provider advertises those exact
+capabilities.
 
 Artifacts are written under `tmp/crucible_v5/`, including:
 

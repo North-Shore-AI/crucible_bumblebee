@@ -44,13 +44,14 @@ defmodule CrucibleBumblebeeTest do
     assert "language_modeling_head.output" in names
   end
 
-  test "tap compiler maps captured outputs and degrades unavailable deep hooks" do
+  test "tap compiler maps captured outputs including deep fork activations" do
     plan =
       TapPlan.new!(
         [
           [id: "hidden", signal_type: :middle_residuals, layers: [0]],
           [id: "attention-pattern", signal_type: :attention_weights, layers: [0]],
           [id: "attention-q", signal_type: :attention_q, layers: [0], required?: false],
+          [id: "mlp-gate", signal_type: :mlp_gates, layers: [0], required?: false],
           [id: "cache-state", signal_type: :kv_cache_state, required?: false],
           [id: "logits", signal_type: :final_logits, layers: [:final]]
         ],
@@ -60,15 +61,18 @@ defmodule CrucibleBumblebeeTest do
     assert {:ok, compiled} = TapCompiler.compile(plan, ExampleSurface.surface(num_blocks: 1))
     assert compiled.global_layer_options[:output_hidden_states]
     assert compiled.global_layer_options[:output_attentions]
+    assert compiled.global_layer_options[:output_attention_qkv]
+    assert compiled.global_layer_options[:output_mlp_activations]
     assert "decoder.layers.0.attention.weights" in compiled.hook_names
+    assert "decoder.layers.0.attention.query" in compiled.hook_names
+    assert "decoder.layers.0.mlp.gate" in compiled.hook_names
     assert "lm_head.output" in compiled.hook_names
     unsupported = Map.new(compiled.unsupported_optional, &{&1.tap_id, &1.reason})
-    assert unsupported["attention-q"] == :unsupported_operation
     assert unsupported["cache-state"] == :no_surface_node
     assert compiled.metadata.surface_id == :example_transformer
   end
 
-  test "required QKV taps fail closed before deep Bumblebee instrumentation exists" do
+  test "required QKV taps compile against the deep Bumblebee fork surface" do
     plan =
       TapPlan.new!(
         [
@@ -82,8 +86,36 @@ defmodule CrucibleBumblebeeTest do
         plan_id: "tap-plan-required-q"
       )
 
-    assert {:error, report} = TapCompiler.compile(plan, Qwen3Surface.surface(num_blocks: 1))
-    assert [%{tap_id: "q-required", reason: :unsupported_operation}] = report.unsupported_required
+    assert {:ok, compiled} = TapCompiler.compile(plan, Qwen3Surface.surface(num_blocks: 1))
+    assert compiled.global_layer_options[:output_attention_qkv]
+    assert "decoder.blocks.0.self_attention.query" in compiled.hook_names
+  end
+
+  test "activation-name taps derive precise fork output options" do
+    surface = ExampleSurface.surface(num_blocks: 1)
+
+    assert {:ok, attn_out} =
+             "attn-out"
+             |> CrucibleTap.activation_tap("blocks.0.hook_attn_out")
+             |> TapCompiler.compile(surface)
+
+    assert attn_out.global_layer_options[:output_attention_qkv]
+    refute attn_out.global_layer_options[:output_residual_streams]
+
+    assert {:ok, mlp_out} =
+             "mlp-out"
+             |> CrucibleTap.activation_tap("blocks.0.hook_mlp_out")
+             |> TapCompiler.compile(surface)
+
+    assert mlp_out.global_layer_options[:output_mlp_activations]
+    refute mlp_out.global_layer_options[:output_residual_streams]
+
+    assert {:ok, resid_mid} =
+             "resid-mid"
+             |> CrucibleTap.activation_tap("blocks.0.hook_resid_mid")
+             |> TapCompiler.compile(surface)
+
+    assert resid_mid.global_layer_options[:output_residual_streams]
   end
 
   test "signal extractor builds records and layer trajectory from fixture outputs" do
@@ -96,6 +128,12 @@ defmodule CrucibleBumblebeeTest do
     assert :final_logits in signal_types
     assert :embeddings in signal_types
     assert :attention_weights in signal_types
+    assert :attention_q in signal_types
+    assert :attention_k in signal_types
+    assert :attention_v in signal_types
+    assert :mlp_gates in signal_types
+    assert :mlp_activation in signal_types
+    assert :residual_stream in signal_types
     assert trajectory.points != []
 
     final_logits = Enum.find(records, &(&1.signal_type == :final_logits))
@@ -108,6 +146,17 @@ defmodule CrucibleBumblebeeTest do
 
     attention = Enum.find(records, &(&1.signal_type == :attention_weights))
     assert attention.metadata.activation_name == "blocks.0.attn.hook_pattern"
+
+    attention_q = Enum.find(records, &(&1.signal_type == :attention_q))
+    assert attention_q.metadata.activation_name == "blocks.0.attn.hook_q"
+
+    mlp_pre = Enum.find(records, &(&1.signal_type == :mlp_gates))
+    assert mlp_pre.metadata.activation_name == "blocks.0.mlp.hook_pre"
+
+    resid_mid =
+      Enum.find(records, &(&1.metadata.activation_name == "blocks.0.hook_resid_mid"))
+
+    assert resid_mid.signal_type == :residual_stream
   end
 
   test "forward runner returns a forward trace from a tiny fixture predict function" do
@@ -177,6 +226,17 @@ defmodule CrucibleBumblebeeTest do
         Nx.tensor([[1.0, 1.0]], type: :f32)
       },
       attentions: {Nx.tensor([[0.5, 0.5]], type: :f32)},
+      attention_queries: {Nx.tensor([[[[1.0, 0.0]]]], type: :f32)},
+      attention_keys: {Nx.tensor([[[[0.8, 0.2]]]], type: :f32)},
+      attention_values: {Nx.tensor([[[[0.3, 0.7]]]], type: :f32)},
+      attention_zs: {Nx.tensor([[[[0.4, 0.6]]]], type: :f32)},
+      attention_outputs: {Nx.tensor([[[0.4, 0.6]]], type: :f32)},
+      mlp_pre_activations: {Nx.tensor([[[0.1, 0.2, 0.3]]], type: :f32)},
+      mlp_post_activations: {Nx.tensor([[[0.2, 0.3, 0.4]]], type: :f32)},
+      mlp_outputs: {Nx.tensor([[[0.9, 0.1]]], type: :f32)},
+      residual_streams_pre: {Nx.tensor([[[1.0, 0.0]]], type: :f32)},
+      residual_streams_mid: {Nx.tensor([[[0.5, 0.5]]], type: :f32)},
+      residual_streams_post: {Nx.tensor([[[0.0, 1.0]]], type: :f32)},
       cache: %{blocks: {:block0}}
     }
   end

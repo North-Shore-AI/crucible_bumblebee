@@ -26,7 +26,10 @@ defmodule CrucibleBumblebee.Qwen3Surface do
   def capabilities(_opts \\ []) do
     %{
       hidden_states: true,
-      attentions: false,
+      attentions: true,
+      deep_attention_activations: true,
+      deep_mlp_activations: true,
+      residual_streams: true,
       named_hooks: true,
       final_logits: true,
       cache_metadata: true,
@@ -49,7 +52,15 @@ defmodule CrucibleBumblebee.Qwen3Surface do
        surface_id: id(),
        model_family: model_family(),
        nodes: Enum.map(nodes(num_blocks), & &1[:id]),
-       post_processing_extractors: [:final_logits, :hidden_states, :cache],
+       post_processing_extractors: [
+         :final_logits,
+         :hidden_states,
+         :attentions,
+         :deep_attention_activations,
+         :deep_mlp_activations,
+         :residual_streams,
+         :cache
+       ],
        logit_lens: %{
          final_norm: [:params, :output_norm],
          unembedding: [:params, :language_modeling_head, :output, :kernel],
@@ -86,17 +97,72 @@ defmodule CrucibleBumblebee.Qwen3Surface do
       node("decoder.blocks.#{layer}.self_attention.query", :attention_q, layer),
       node("decoder.blocks.#{layer}.self_attention.key", :attention_k, layer),
       node("decoder.blocks.#{layer}.self_attention.value", :attention_v, layer),
-      node("decoder.blocks.#{layer}.self_attention.output", :head_outputs, layer),
+      node("decoder.blocks.#{layer}.self_attention.weights", :attention_weights, layer),
+      node("decoder.blocks.#{layer}.self_attention.z", :head_outputs, layer),
+      node(
+        "decoder.blocks.#{layer}.self_attention.output",
+        :residual_stream,
+        layer,
+        CrucibleBumblebee.ActivationMapper.attention_output(layer)
+      ),
       node("decoder.blocks.#{layer}.self_attention_norm", :norm_telemetry, layer),
       node("decoder.blocks.#{layer}.ffn.gate", :mlp_gates, layer),
-      node("decoder.blocks.#{layer}.ffn.intermediate", :middle_residuals, layer),
-      node("decoder.blocks.#{layer}.ffn.output", :middle_residuals, layer),
+      node(
+        "decoder.blocks.#{layer}.ffn.pre",
+        :mlp_activation,
+        layer,
+        CrucibleBumblebee.ActivationMapper.mlp_pre(layer)
+      ),
+      node(
+        "decoder.blocks.#{layer}.ffn.post",
+        :mlp_activation,
+        layer,
+        CrucibleBumblebee.ActivationMapper.mlp_post(layer)
+      ),
+      node(
+        "outputs.mlp_outputs.#{layer}",
+        :residual_stream,
+        layer,
+        CrucibleBumblebee.ActivationMapper.mlp_output(layer)
+      ),
+      node("decoder.blocks.#{layer}.ffn.output", :middle_residuals, layer, %{}),
+      node(
+        "decoder.blocks.#{layer}.resid.pre",
+        :residual_stream,
+        layer,
+        CrucibleBumblebee.ActivationMapper.residual_stream(
+          layer,
+          :hook_resid_pre,
+          :residual_streams_pre
+        )
+      ),
+      node(
+        "decoder.blocks.#{layer}.resid.mid",
+        :residual_stream,
+        layer,
+        CrucibleBumblebee.ActivationMapper.residual_stream(
+          layer,
+          :hook_resid_mid,
+          :residual_streams_mid
+        )
+      ),
+      node(
+        "decoder.blocks.#{layer}.resid.post",
+        :residual_stream,
+        layer,
+        CrucibleBumblebee.ActivationMapper.residual_stream(
+          layer,
+          :hook_resid_post,
+          :residual_streams_post
+        )
+      ),
       node("decoder.blocks.#{layer}.output_norm", :norm_telemetry, layer)
     ]
   end
 
-  defp node(layer_name, signal_type, layer_index) do
-    metadata = CrucibleBumblebee.ActivationMapper.surface_metadata(signal_type, layer_index)
+  defp node(layer_name, signal_type, layer_index, metadata \\ nil) do
+    metadata =
+      metadata || CrucibleBumblebee.ActivationMapper.surface_metadata(signal_type, layer_index)
 
     [
       id: layer_name,
@@ -112,7 +178,20 @@ defmodule CrucibleBumblebee.Qwen3Surface do
   end
 
   defp operations(signal_type)
-       when signal_type in [:embeddings, :middle_residuals, :late_residuals, :final_logits],
+       when signal_type in [
+              :embeddings,
+              :attention_q,
+              :attention_k,
+              :attention_v,
+              :attention_weights,
+              :head_outputs,
+              :residual_stream,
+              :mlp_gates,
+              :mlp_activation,
+              :middle_residuals,
+              :late_residuals,
+              :final_logits
+            ],
        do: [:read, :probe]
 
   defp operations(_signal_type), do: [:probe]

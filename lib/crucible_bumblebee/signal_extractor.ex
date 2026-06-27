@@ -16,6 +16,7 @@ defmodule CrucibleBumblebee.SignalExtractor do
       |> maybe_add_logits(outputs, trace_id, model_id)
       |> maybe_add_hidden_states(outputs, trace_id, model_id)
       |> maybe_add_attentions(outputs, trace_id, model_id)
+      |> maybe_add_deep_outputs(outputs, trace_id, model_id)
 
     {Enum.reverse(records), trajectory(records)}
   end
@@ -33,7 +34,8 @@ defmodule CrucibleBumblebee.SignalExtractor do
 
   defp maybe_add_logits(records, _outputs, _trace_id, _model_id), do: records
 
-  defp maybe_add_hidden_states(records, %{hidden_states: hidden_states}, trace_id, model_id) do
+  defp maybe_add_hidden_states(records, %{hidden_states: hidden_states}, trace_id, model_id)
+       when not is_struct(hidden_states, Axon.None) do
     hidden_states
     |> tuple_or_list()
     |> Enum.with_index()
@@ -55,7 +57,8 @@ defmodule CrucibleBumblebee.SignalExtractor do
 
   defp maybe_add_hidden_states(records, _outputs, _trace_id, _model_id), do: records
 
-  defp maybe_add_attentions(records, %{attentions: attentions}, trace_id, model_id) do
+  defp maybe_add_attentions(records, %{attentions: attentions}, trace_id, model_id)
+       when not is_struct(attentions, Axon.None) do
     attentions
     |> tuple_or_list()
     |> Enum.with_index()
@@ -72,6 +75,71 @@ defmodule CrucibleBumblebee.SignalExtractor do
   end
 
   defp maybe_add_attentions(records, _outputs, _trace_id, _model_id), do: records
+
+  defp maybe_add_deep_outputs(records, outputs, trace_id, model_id) do
+    records
+    |> maybe_add_tuple_output(outputs, :attention_queries, :attention_q, trace_id, model_id)
+    |> maybe_add_tuple_output(outputs, :attention_keys, :attention_k, trace_id, model_id)
+    |> maybe_add_tuple_output(outputs, :attention_values, :attention_v, trace_id, model_id)
+    |> maybe_add_tuple_output(outputs, :attention_zs, :head_outputs, trace_id, model_id)
+    |> maybe_add_tuple_output(outputs, :attention_outputs, :head_outputs, trace_id, model_id)
+    |> maybe_add_tuple_output(outputs, :mlp_pre_activations, :mlp_gates, trace_id, model_id)
+    |> maybe_add_tuple_output(outputs, :mlp_post_activations, :mlp_activation, trace_id, model_id)
+    |> maybe_add_tuple_output(outputs, :mlp_outputs, :middle_residuals, trace_id, model_id)
+    |> maybe_add_tuple_output(
+      outputs,
+      :residual_streams_pre,
+      :residual_stream,
+      trace_id,
+      model_id
+    )
+    |> maybe_add_tuple_output(
+      outputs,
+      :residual_streams_mid,
+      :residual_stream,
+      trace_id,
+      model_id
+    )
+    |> maybe_add_tuple_output(
+      outputs,
+      :residual_streams_post,
+      :residual_stream,
+      trace_id,
+      model_id
+    )
+  end
+
+  defp maybe_add_tuple_output(records, outputs, output_key, signal_type, trace_id, model_id) do
+    case Map.fetch(outputs, output_key) do
+      {:ok, %Axon.None{}} ->
+        records
+
+      {:ok, values} ->
+        values
+        |> tuple_or_list()
+        |> Enum.with_index()
+        |> Enum.reduce(records, fn {value, index}, acc ->
+          metadata = ActivationMapper.output_metadata(output_key, index)
+
+          [
+            record(
+              trace_id,
+              "#{output_key}:#{index}",
+              signal_type,
+              model_id,
+              value,
+              layer_index: Map.get(metadata, :layer_index, index),
+              node_name: "#{output_key}:#{index}",
+              metadata: metadata
+            )
+            | acc
+          ]
+        end)
+
+      :error ->
+        records
+    end
+  end
 
   defp record(trace_id, signal_id, signal_type, model_id, value, opts) do
     summary = TensorSummary.compute(value, entropy: signal_type == :final_logits)
@@ -101,7 +169,8 @@ defmodule CrucibleBumblebee.SignalExtractor do
             :embeddings,
             :early_residuals,
             :middle_residuals,
-            :late_residuals
+            :late_residuals,
+            :residual_stream
           ])
       )
       |> Enum.map(fn record ->
