@@ -79,7 +79,7 @@ defmodule CrucibleBumblebee.ExampleSurface do
       node("decoder.layers.#{layer}.attention.query", :attention_q, layer),
       node("decoder.layers.#{layer}.attention.key", :attention_k, layer),
       node("decoder.layers.#{layer}.attention.value", :attention_v, layer),
-      node("decoder.layers.#{layer}.attention.weights", :attention_maps, layer),
+      node("decoder.layers.#{layer}.attention.weights", :attention_weights, layer),
       node("decoder.layers.#{layer}.attention.output", :head_outputs, layer),
       node("decoder.layers.#{layer}.pre_attention_norm", :norm_telemetry, layer),
       node("decoder.layers.#{layer}.mlp.gate", :mlp_gates, layer),
@@ -88,15 +88,32 @@ defmodule CrucibleBumblebee.ExampleSurface do
   end
 
   defp node(layer_name, signal_type, layer_index) do
+    metadata = CrucibleBumblebee.ActivationMapper.surface_metadata(signal_type, layer_index)
+
     [
       id: layer_name,
       signal_type: signal_type,
+      activation_name: Map.get(metadata, :activation_name),
+      axes: Map.get(metadata, :axes),
       layer_name: layer_name,
       layer_index: layer_index,
-      operations: [:read, :probe],
-      capture_modes: [:summary, :sample, :compressed_vector]
+      operations: operations(signal_type),
+      capture_modes: [:summary, :sample, :compressed_vector],
+      metadata: metadata
     ]
   end
+
+  defp operations(signal_type)
+       when signal_type in [
+              :embeddings,
+              :middle_residuals,
+              :late_residuals,
+              :attention_weights,
+              :final_logits
+            ],
+       do: [:read, :probe]
+
+  defp operations(_signal_type), do: [:probe]
 
   defp fetch_path(value, []), do: {:ok, value}
 

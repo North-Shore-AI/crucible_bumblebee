@@ -4,6 +4,7 @@ defmodule CrucibleBumblebee.SignalExtractor do
   """
 
   alias Crucible.{SignalRecord, TensorSummary}
+  alias CrucibleBumblebee.ActivationMapper
   alias CrucibleSignalTrace.LayerTrajectory
 
   def extract(outputs, attrs) when is_map(outputs) do
@@ -21,7 +22,11 @@ defmodule CrucibleBumblebee.SignalExtractor do
 
   defp maybe_add_logits(records, %{logits: logits}, trace_id, model_id) do
     [
-      record(trace_id, "final_logits", :final_logits, model_id, logits, layer_index: :final)
+      record(trace_id, "final_logits", :final_logits, model_id, logits,
+        layer_index: :final,
+        node_name: "final_logits",
+        metadata: ActivationMapper.final_logits()
+      )
       | records
     ]
   end
@@ -33,11 +38,15 @@ defmodule CrucibleBumblebee.SignalExtractor do
     |> tuple_or_list()
     |> Enum.with_index()
     |> Enum.reduce(records, fn {hidden_state, index}, acc ->
-      type = hidden_type(index, length(tuple_or_list(hidden_states)))
+      size = length(tuple_or_list(hidden_states))
+      type = hidden_type(index, size)
+      metadata = ActivationMapper.hidden_state(index, size)
 
       [
         record(trace_id, "hidden_states:#{index}", type, model_id, hidden_state,
-          layer_index: index
+          layer_index: Map.get(metadata, :layer_index, index),
+          node_name: "hidden_states:#{index}",
+          metadata: metadata
         )
         | acc
       ]
@@ -52,8 +61,10 @@ defmodule CrucibleBumblebee.SignalExtractor do
     |> Enum.with_index()
     |> Enum.reduce(records, fn {attention, index}, acc ->
       [
-        record(trace_id, "attentions:#{index}", :attention_maps, model_id, attention,
-          layer_index: index
+        record(trace_id, "attentions:#{index}", :attention_weights, model_id, attention,
+          layer_index: index,
+          node_name: "attentions:#{index}",
+          metadata: ActivationMapper.attention_weights(index)
         )
         | acc
       ]
@@ -71,10 +82,14 @@ defmodule CrucibleBumblebee.SignalExtractor do
       signal_type: signal_type,
       model_id: model_id,
       layer_index: Keyword.get(opts, :layer_index),
+      node_name: Keyword.get(opts, :node_name),
+      capture_method: :bumblebee_output,
+      capability_status: :captured,
       dtype: summary.dtype,
       shape: summary.shape,
       rank: summary.rank,
-      tensor_summary: summary
+      tensor_summary: summary,
+      metadata: Keyword.get(opts, :metadata, %{})
     )
   end
 

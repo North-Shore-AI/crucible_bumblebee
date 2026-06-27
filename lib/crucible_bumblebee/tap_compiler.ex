@@ -50,7 +50,10 @@ defmodule CrucibleBumblebee.TapCompiler do
 
     []
     |> maybe_put(:output_hidden_states, Enum.any?(signal_types, &hidden_state_type?/1))
-    |> maybe_put(:output_attentions, :attention_maps in signal_types)
+    |> maybe_put(
+      :output_attentions,
+      Enum.any?(signal_types, &(&1 in [:attention_maps, :attention_weights]))
+    )
   end
 
   defp hidden_state_type?(type) do

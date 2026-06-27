@@ -96,15 +96,26 @@ defmodule CrucibleBumblebee.Qwen3Surface do
   end
 
   defp node(layer_name, signal_type, layer_index) do
+    metadata = CrucibleBumblebee.ActivationMapper.surface_metadata(signal_type, layer_index)
+
     [
       id: layer_name,
       signal_type: signal_type,
+      activation_name: Map.get(metadata, :activation_name),
+      axes: Map.get(metadata, :axes),
       layer_name: layer_name,
       layer_index: layer_index,
-      operations: [:read, :probe],
-      capture_modes: [:summary, :sample]
+      operations: operations(signal_type),
+      capture_modes: [:summary, :sample],
+      metadata: metadata
     ]
   end
+
+  defp operations(signal_type)
+       when signal_type in [:embeddings, :middle_residuals, :late_residuals, :final_logits],
+       do: [:read, :probe]
+
+  defp operations(_signal_type), do: [:probe]
 
   defp fetch_path(value, []), do: {:ok, value}
 

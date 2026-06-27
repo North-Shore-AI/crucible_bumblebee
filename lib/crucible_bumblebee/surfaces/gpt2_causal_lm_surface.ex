@@ -59,14 +59,19 @@ defmodule CrucibleBumblebee.Surfaces.Gpt2CausalLMSurface do
   def logit_lens_access(_model_info, _params), do: {:error, :unsupported}
 
   def nodes(_num_blocks \\ 1) do
+    metadata = CrucibleBumblebee.ActivationMapper.final_logits()
+
     [
       [
         id: "final_logits",
         signal_type: :final_logits,
+        activation_name: Map.get(metadata, :activation_name),
+        axes: Map.get(metadata, :axes),
         layer_name: "final_logits",
         layer_index: :final,
         operations: [:read, :route_on],
-        capture_modes: [:summary]
+        capture_modes: [:summary],
+        metadata: metadata
       ]
     ]
   end

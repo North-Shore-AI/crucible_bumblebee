@@ -1,0 +1,43 @@
+{
+  "unsupported": [
+    "in_graph_steering"
+  ],
+  "version": 1,
+  "nodes": [
+    "embedder.token_embedding",
+    "decoder.blocks.0.self_attention.query",
+    "decoder.blocks.0.self_attention.key",
+    "decoder.blocks.0.self_attention.value",
+    "decoder.blocks.0.self_attention.output",
+    "decoder.blocks.0.self_attention_norm",
+    "decoder.blocks.0.ffn.gate",
+    "decoder.blocks.0.ffn.intermediate",
+    "decoder.blocks.0.ffn.output",
+    "decoder.blocks.0.output_norm",
+    "output_norm",
+    "language_modeling_head.output"
+  ],
+  "model_family": "qwen3",
+  "logit_lens": {
+    "hidden_states": "outputs_hidden_states",
+    "final_norm": [
+      "params",
+      "output_norm"
+    ],
+    "unembedding": [
+      "params",
+      "language_modeling_head",
+      "output",
+      "kernel"
+    ]
+  },
+  "surface_id": "qwen3_example",
+  "post_processing_extractors": [
+    "final_logits",
+    "hidden_states",
+    "cache"
+  ],
+  "surface_module": "CrucibleBumblebee.Qwen3Surface",
+  "dependency_fingerprint": "9e31476f5a941272",
+  "schema": "crucible_bumblebee.surface_preflight"
+}

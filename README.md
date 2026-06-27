@@ -64,6 +64,21 @@ support is provided as `Qwen3Surface`, an example surface module with its own
 preflight artifact. Other model families provide their own surface module and
 artifact; no runner assumes Qwen params paths or a 0.6B model.
 
+## Mechanistic-Interpretability Metadata
+
+The provider now tags emitted Bumblebee outputs with canonical activation
+metadata:
+
+- final logits: `unembed.hook_logits`
+- hidden-state tuple entries: residual-stream names such as
+  `blocks.0.hook_resid_pre`
+- attention output collections: `blocks.N.attn.hook_pattern`
+
+Surface-declared deep hooks such as Q/K/V are probe-only until Bumblebee/Axon
+instrumentation can emit the actual tensors. Required Q/K/V read taps therefore
+fail closed with explicit capability reasons instead of compiling into a trace
+that cannot contain those activations.
+
 ## Guides
 
 - [Quickstart](guides/quickstart.md)
@@ -96,9 +111,11 @@ The Binary backend ran locally. EXLA CPU/CUDA and Torchx were recorded as
 unavailable on the local Elixir stack for this run. The signal/generation gates
 captured input IDs, attention masks, final logits, top-k, entropy, margin,
 backend events, generated tokens, and manual autoregressive generation-step
-logits where the model was causal. Hidden states, attentions, global
-intermediate logits, KV-cache metadata, and active mutation remain structured
-Bumblebee/Axon surface blockers unless a provider advertises those capabilities.
+logits where the model was causal. Hidden states and attention collections are
+captured only when Bumblebee returns them for the compiled run. Deep Q/K/V,
+MLP internals, global intermediate logits, KV-cache metadata, and active
+mutation remain structured Bumblebee/Axon surface blockers unless a provider
+advertises those exact capabilities.
 
 Artifacts are written under `tmp/crucible_v5/`, including:
 

@@ -11,6 +11,10 @@ defmodule CrucibleBumblebee.Surfaces.Gpt2CausalLMSurfaceTest do
     assert surface.capabilities.final_logits
     refute surface.capabilities.hidden_state
     refute surface.capabilities.attention_weights
+
+    [node] = surface.surface.nodes
+    assert node.activation_name == "unembed.hook_logits"
+    assert node.axes == [:batch, :pos, :d_vocab]
   end
 
   test "preflight accepts GPT-2 family metadata and rejects mismatched families" do

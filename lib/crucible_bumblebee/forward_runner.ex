@@ -3,7 +3,15 @@ defmodule CrucibleBumblebee.ForwardRunner do
   Runs a Bumblebee-style predict function and returns a Crucible forward trace.
   """
 
-  alias CrucibleBumblebee.{CacheSummary, ExampleSurface, Serving, SignalExtractor, TapCompiler}
+  alias CrucibleBumblebee.{
+    CacheSummary,
+    ExampleSurface,
+    InstrumentedForward,
+    Serving,
+    SignalExtractor,
+    TapCompiler
+  }
+
   alias Crucible.ForwardTrace
 
   def run(predict_fun, inputs, tap_plan, opts \\ []) when is_function(predict_fun, 1) do
@@ -17,24 +25,26 @@ defmodule CrucibleBumblebee.ForwardRunner do
     model_id = Keyword.get(opts, :model_id, serving.model_id || "bumblebee:model")
     outputs = serving.predict_fun.(inputs)
 
-    {records, trajectory} =
-      SignalExtractor.extract(outputs, trace_id: trace_id, model_id: model_id)
+    with :ok <- InstrumentedForward.validate_outputs(outputs, serving.compiled_taps) do
+      {records, trajectory} =
+        SignalExtractor.extract(outputs, trace_id: trace_id, model_id: model_id)
 
-    {:ok,
-     ForwardTrace.new!(
-       trace_id: trace_id,
-       model_id: model_id,
-       tap_plan_ref: serving.compiled_taps.tap_plan_id,
-       signals: records,
-       layer_trajectory: trajectory,
-       final_logits: final_logits_ref(records),
-       cache_summary: CacheSummary.summarize(Map.get(outputs, :cache)),
-       metadata: %{
-         compiled_taps: compiled_tap_summary(serving.compiled_taps),
-         serving_ref: serving.serving_ref,
-         lifecycle: [:plan_compilation, :serving_compilation, :execution]
-       }
-     )}
+      {:ok,
+       ForwardTrace.new!(
+         trace_id: trace_id,
+         model_id: model_id,
+         tap_plan_ref: serving.compiled_taps.tap_plan_id,
+         signals: records,
+         layer_trajectory: trajectory,
+         final_logits: final_logits_ref(records),
+         cache_summary: CacheSummary.summarize(Map.get(outputs, :cache)),
+         metadata: %{
+           compiled_taps: compiled_tap_summary(serving.compiled_taps),
+           serving_ref: serving.serving_ref,
+           lifecycle: [:plan_compilation, :serving_compilation, :execution]
+         }
+       )}
+    end
   end
 
   def compile_serving(predict_fun, tap_plan, opts \\ []) when is_function(predict_fun, 1) do
