@@ -141,8 +141,6 @@ defmodule CrucibleBumblebee.HookRegistry do
     Enum.find(nodes, &classification_head?(&1.generated_name)) || hd(nodes)
   end
 
-  defp mlp_fallback([]), do: nil
-
   defp mlp_fallback(nodes) do
     Enum.find(nodes, &mlp_name?(&1.generated_name)) ||
       generic_mlp_fallback(nodes)

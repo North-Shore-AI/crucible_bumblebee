@@ -73,13 +73,12 @@ defmodule CrucibleBumblebee.ModelSurface do
     }
   end
 
-  def output_options(%__MODULE__{module: module}, compiled_plan) when is_atom(module) do
+  def output_options(%__MODULE__{module: module}, compiled_plan)
+      when is_atom(module) and not is_nil(module) do
     module.output_options(compiled_plan)
   end
 
-  def output_options(%__MODULE__{}, compiled_plan) do
-    Map.get(compiled_plan, :global_layer_options, [])
-  end
+  def output_options(%__MODULE__{}, _compiled_plan), do: []
 
   def preflight(surface, model_info, opts \\ [])
 

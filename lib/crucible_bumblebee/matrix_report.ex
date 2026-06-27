@@ -45,7 +45,7 @@ defmodule CrucibleBumblebee.MatrixReport do
   defp read_rows(path) do
     if File.exists?(path) do
       path
-      |> File.stream!([], :line)
+      |> File.stream!(:line, [])
       |> Stream.map(&String.trim/1)
       |> Stream.reject(&(&1 == ""))
       |> Enum.map(&Jason.decode!/1)

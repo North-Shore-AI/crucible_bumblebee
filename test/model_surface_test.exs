@@ -64,4 +64,27 @@ defmodule CrucibleBumblebee.ModelSurfaceTest do
     assert preflight.surface_id == :distilbert_final_logits
     assert preflight.nodes == ["final_logits"]
   end
+
+  test "module-less surfaces do not inherit neutral compiled-plan backend options" do
+    surface =
+      ModelSurface.new!(
+        :distilbert,
+        [
+          [
+            id: "final_logits",
+            signal_type: :final_logits,
+            layer_name: "final_logits",
+            layer_index: :final,
+            operations: [:read],
+            capture_modes: [:summary]
+          ]
+        ],
+        %{surface_id: :distilbert_final_logits}
+      )
+
+    assert ModelSurface.output_options(surface, %{
+             global_layer_options: [output_hidden_states: true]
+           }) ==
+             []
+  end
 end

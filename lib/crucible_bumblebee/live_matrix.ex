@@ -198,6 +198,9 @@ defmodule CrucibleBumblebee.LiveMatrix do
             stop_token_ids: Keyword.get(generation_opts, :stop_token_ids, [])
           )
 
+        ok? = Map.get(result, :ok, false)
+        success_level = Map.get(result, :generation_success_level)
+
         %{
           rung: model.rung,
           model_id: model.model_id,
@@ -205,15 +208,15 @@ defmodule CrucibleBumblebee.LiveMatrix do
           backend: backend,
           generation_strategy: Keyword.get(generation_opts, :generation_strategy, :greedy),
           stop_token_ids: Keyword.get(generation_opts, :stop_token_ids, []),
-          generation: result.generation_supported?,
-          success_level: result.generation_success_level,
+          generation: Map.get(result, :generation_supported?, false),
+          success_level: success_level,
           generated_tokens: Map.get(result, :generated_token_ids, []),
-          step_logits: result.generation_success_level == :generation_step_logits,
+          step_logits: success_level == :generation_step_logits,
           step_count: Map.get(result, :step_count, 0),
           trace: result.trace_path,
           duration_ms: elapsed_ms(started),
-          result: if(result.ok, do: "passed", else: "failed"),
-          error: if(result.ok, do: nil, else: inspect(Map.get(result, :reason)))
+          result: if(ok?, do: "passed", else: "failed"),
+          error: if(ok?, do: nil, else: inspect(Map.get(result, :reason)))
         }
       else
         {:error, blocker} -> blocked_generation_row(model, backend, started, blocker)
