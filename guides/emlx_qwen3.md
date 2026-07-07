@@ -24,8 +24,18 @@ Current pin:
 
 - repo: `https://github.com/North-Shore-AI/emlx.git`
 - branch: `phase-9-qwen3-trace`
-- ref: `4076ec422e38255bc7cda3fb527ea372d010351e`
+- ref: `16629bc936c6e1919fc97232e8615d48a262885d`
 - sparse package: `emlx_axon`
+
+The fork branch is kept up to date with `elixir-nx/emlx` main (merged
+through the fused kv_cache+sdpa PR, elixir-nx/emlx#124) so the trace
+implementation benefits from upstream's native compiler and NIF
+improvements. Upstream also shipped its own, independent
+`EMLXAxon.Qwen3.{Model,Generate}` under the same module names (a
+non-instrumented dense-generation path with no tracing support) — the fork
+keeps our own instrumented implementation and does not adopt upstream's
+competing one, since this bridge depends on `generate_trace/3`, which
+upstream's version never had.
 
 ## Surface
 

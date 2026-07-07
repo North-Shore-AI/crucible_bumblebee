@@ -13,7 +13,7 @@ defmodule CrucibleBumblebee.EMLXQwen3 do
 
   @emlx_repo "https://github.com/North-Shore-AI/emlx.git"
   @emlx_branch "phase-9-qwen3-trace"
-  @emlx_ref "4076ec422e38255bc7cda3fb527ea372d010351e"
+  @emlx_ref "16629bc936c6e1919fc97232e8615d48a262885d"
 
   @capture_groups [
     :cache_metadata,
