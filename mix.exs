@@ -44,11 +44,11 @@ defmodule CrucibleBumblebee.MixProject do
       {:crucible_signal_trace, path: "../crucible_signal_trace"},
       {:crucible_mechinterp, path: "../crucible_mechinterp"},
       {:crucible_policy, path: "../crucible_policy"},
-      {:nx, "~> 0.12", override: true},
-      {:axon, "~> 0.7"},
+      {:nx, "~> 0.12.1", override: true},
+      {:axon, "~> 0.8.1"},
       {:bumblebee, github: "North-Shore-AI/bumblebee", ref: @bumblebee_ref, override: true},
       {:jason, "~> 1.4"},
-      {:ex_doc, "~> 0.40.1", only: [:dev, :test], runtime: false}
+      {:ex_doc, "~> 0.40.3", only: [:dev, :test], runtime: false}
     ]
   end
 
